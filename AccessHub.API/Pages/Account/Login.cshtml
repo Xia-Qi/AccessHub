@@ -1,0 +1,140 @@
+﻿@page
+@using AccessHub.API.Pages.Account
+@model AccessHub.API.Pages.Account.LoginModel
+@{
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --text: #111827;
+            --text-light: #6b7280;
+            --radius: 16px;
+            --shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .card {
+            width: 380px;
+            background: var(--card-bg);
+            padding: 40px 32px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.6s ease;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            margin: 0 0 10px;
+            font-size: 26px;
+            color: var(--text);
+        }
+
+        .subtitle {
+            margin-bottom: 28px;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: var(--radius);
+            background: #f9fafb;
+            transition: 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: #fff;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius);
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Welcome Back</h2>
+        <div class="subtitle">Sign in to continue</div>
+
+        <form method="post" action="/connect/authorize/login">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input id="username" name="Input.Username" type="text" required />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input id="password" name="Input.Password" type="password" required />
+            </div>
+
+            <button class="btn" type="submit">Login</button>
+        </form>
+
+        <div class="footer">
+            <a href="#">Forgot password?</a>
+        </div>
+    </div>
+</body>
+</html>

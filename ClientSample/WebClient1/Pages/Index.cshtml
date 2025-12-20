@@ -1,0 +1,15 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p><input asp-for="Code"/></p>
+    <button type="button"
+            onclick="location.href='http:5700//connect/authorize?client_id=web-client&response_type=code&redirect_uri=http:5800//index?scope=openid%20profile&state=abc123'">
+        立即授权
+    </button>
+    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
