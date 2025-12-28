@@ -65,7 +65,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     opt.AllowRefreshTokenFlow();// 刷新令牌流
                     opt.AllowDeviceAuthorizationFlow();// 设备流
                     // 4. 令牌配置
-                    opt.RegisterScopes("api", "offline_access","user") // 注册作用域，作用域在令牌中表示访问权限。（实际项目应该根据permissions来注册作用域）
+                    opt.RegisterScopes("ahbapi.user.read", "ahbapi.user.write","ahbapi.user.delete") // 注册作用域，作用域在令牌中表示访问权限。（实际项目应该根据permissions来注册作用域）
                            .SetAccessTokenLifetime(TimeSpan.FromHours(1));
 
                     // 5. 安全配置

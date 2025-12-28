@@ -16,7 +16,7 @@ namespace AccessHub.API.Controllers
             _mediator = mediator;
         }
         [HttpGet]
-        [Authorize("UserApiScope")]
+        [Authorize(Policy = "UserRead")]
         public async Task<IActionResult> Index()
         {
             var user = await _mediator.Send(new GetUserDetailsQuery("test"));

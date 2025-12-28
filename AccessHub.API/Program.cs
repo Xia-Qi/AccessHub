@@ -15,7 +15,7 @@ builder.Services.AddOpenIddict()
     // 注册 OpenIddict 验证组件,保护本api资源
     .AddValidation(opt =>
                 {
-                    opt.AddAudiences("UserApi");
+                    //opt.AddAudiences("UserApi");
                     // 从本地 OpenIddict 服务器实例导入配置,当授权服务和api在同一进程中时使用。
                     opt.UseLocalServer();
                     //注册 ASP.NET Core 主机
@@ -26,10 +26,20 @@ builder.Services.AddOpenIddict()
 builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("UserApiScope", policy =>
+    options.AddPolicy("UserRead", policy =>
     {
         policy.RequireAuthenticatedUser();
-        policy.RequireClaim("scope", "UserApiScope");
+        policy.RequireClaim("scope", "ahbapi.user.read");
+    });
+    options.AddPolicy("UserWrite", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("scope", "ahbapi.user.write");
+    });
+    options.AddPolicy("UserDelete", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("scope", "ahbapi.user.delete");
     });
 });
 

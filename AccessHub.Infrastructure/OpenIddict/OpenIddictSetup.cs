@@ -18,14 +18,14 @@ namespace AccessHub.Infrastructure.OpenIddict
         {
             var appManager = sp.GetRequiredService<IOpenIddictApplicationManager>();
 
-            if (await appManager.FindByClientIdAsync("app1") == null)
+            if (await appManager.FindByClientIdAsync("userManageClient") == null)
             {
                 await appManager.CreateAsync(new OpenIddictApplicationDescriptor
                 {
-                    ClientId = "app1",
-                    ClientSecret = "app1-secret",
-                    DisplayName = "Sample Client",
-                    RedirectUris = { new Uri("https://app1.com/signin-oidc") },
+                    ClientId = "userManageClient",
+                    ClientSecret = "userManageClient-secret",
+                    DisplayName = "User Management Client",
+                    RedirectUris = { new Uri("https://app1.com/signin-oidc") }, // TODO:
                     Permissions =
                 {
                     Permissions.Endpoints.Authorization,
@@ -33,19 +33,41 @@ namespace AccessHub.Infrastructure.OpenIddict
                     Permissions.GrantTypes.AuthorizationCode,
                     Permissions.ResponseTypes.Code,
                     Permissions.GrantTypes.ClientCredentials,
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "UserApiScope"
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.read",
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.write",
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.delete"
                 },
 
                 });
             }
             var scopeManager = sp.GetRequiredService<IOpenIddictScopeManager>();
-            if (await scopeManager.FindByNameAsync("UserApiScope") == null)
+            if (await scopeManager.FindByNameAsync("ahbapi.user.read") == null)
             {
                 await scopeManager.CreateAsync(new OpenIddictScopeDescriptor
                 {
-                    Name = "UserApiScope",
-                    Description = "UserApiScope",
-                    Resources = { "UserApi" }
+                    Name = "ahbapi.user.read",
+                    Description = "Get user information",
+                    Resources = { "ahbapi" }
+                }
+                );
+            }
+            if (await scopeManager.FindByNameAsync("ahbapi.user.write") == null)
+            {
+                await scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+                {
+                    Name = "ahbapi.user.write",
+                    Description = "Modify user information",
+                    Resources = { "ahbapi" }
+                }
+                );
+            }
+            if (await scopeManager.FindByNameAsync("ahbapi.user.delete") == null)
+            {
+                await scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+                {
+                    Name = "ahbapi.user.delete",
+                    Description = "Delete user",
+                    Resources = { "ahbapi" }    
                 }
                 );
             }

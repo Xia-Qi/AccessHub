@@ -4,6 +4,11 @@
 
 ## ef migration
 dotnet ef migrations add InitialCreate
+dotnet ef database update
+
+mysql -u appuser -p
+DROP DATABASE accesshub;
+CREATE DATABASE accesshub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ## swagger
 手动添加swagger时，代码配置好后，运行报错：Could not find file 'E:\Code\AccessHub\AccessHub.API\bin\Debug\net8.0\AccessHub.API.xml

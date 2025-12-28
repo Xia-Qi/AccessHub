@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccessHub.Infrastructure.Migrations
 {
     [DbContext(typeof(AccessHubDbContext))]
-    [Migration("20251201145257_InitialCreate")]
+    [Migration("20251227191522_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -245,7 +245,8 @@ namespace AccessHub.Infrastructure.Migrations
                         .HasColumnType("varchar(100)");
 
                     b.Property<string>("ClientSecret")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("ClientType")
                         .HasMaxLength(50)
@@ -323,8 +324,8 @@ namespace AccessHub.Infrastructure.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("Subject")
-                        .HasMaxLength(400)
-                        .HasColumnType("varchar(400)");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Type")
                         .HasMaxLength(50)
@@ -419,12 +420,12 @@ namespace AccessHub.Infrastructure.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("Subject")
-                        .HasMaxLength(400)
-                        .HasColumnType("varchar(400)");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Type")
-                        .HasMaxLength(150)
-                        .HasColumnType("varchar(150)");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.HasKey("Id");
 

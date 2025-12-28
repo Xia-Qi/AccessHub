@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Collections.Immutable;
+using System.Security.Claims;
 using AccessHub.Domain.Users;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -76,7 +77,7 @@ namespace AccessHub.API.Controllers
                 grant_type=client_credentials
                 client_id=reporting-service
                 client_secret=123456
-                scope=api.read api.write
+                scope=ahbapi.user.read ahbapi.user.write
 
                 +-------------+     client_id + client_secret       +----------------+
                 |   Client    | ----------------------------------> | Authorization  |
@@ -100,30 +101,45 @@ namespace AccessHub.API.Controllers
                 var application = await _applicationManager.FindByClientIdAsync(request.ClientId) ??
                     throw new InvalidOperationException("The application cannot be found.");
 
+                var clientId = await _applicationManager.GetClientIdAsync(application);
+
+                // requestedScopes:客户端请求的 scopes; allowedScopes:客户端被允许的 scopes;
+                var requestedScopes = request.GetScopes();
+                var allowedScopes = (await _applicationManager.GetPermissionsAsync(application))
+                    .Where(p => p.StartsWith(Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
+                    .Select(p => p.Substring(Permissions.Prefixes.Scope.Length)).ToImmutableArray();
+                // 最终授权 scopes
+                var scopes = requestedScopes.Intersect(allowedScopes);
+
                 // 创建一个新的ClaimsIdentity，其中包含用于生
                 // 成 id_token、token 或 code的声明.
-                var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
+                var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
 
                 // 使用 client_id 作为主题标识符
-                identity.SetClaim(Claims.Subject, await _applicationManager.GetClientIdAsync(application));
-                identity.SetClaim(Claims.Name, await _applicationManager.GetDisplayNameAsync(application));
+                identity.AddClaim(Claims.Subject, clientId);
+                identity.AddClaim(Claims.ClientId, clientId);
+                //identity.AddClaim("tenant_id", tenantId);
 
                 identity.SetDestinations(static claim => claim.Type switch
                 {
-                    // 当授予了 “profile” 范围时，允许 “name” 声明被存储在
-                    // 访问令牌和身份令牌中 （通过调用 principal.SetScopes(...)）
-                    Claims.Name when claim.Subject.HasScope(OpenIddictConstants.Scopes.Profile)
-                        => [Destinations.AccessToken, Destinations.IdentityToken],
+                    "tenant_id" => new[]
+                    {
+                        Destinations.AccessToken
+                    },
 
-                    // 否则，仅将该声明存储在访问令牌中
-                    _ => [Destinations.AccessToken]
+                    Claims.Subject => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+
+                    _ => Array.Empty<string>()
                 });
-                //var properties = new AuthenticationProperties { };
-                //properties.SetParameter(OpenIddictConstants.Parameters.Scope, "UserApiScope");
-                //properties.SetParameter(OpenIddictConstants.Parameters.Audience, "UserApi");
-                
+
                 var principal = new ClaimsPrincipal(identity);
-                principal.SetScopes(new[] { "UserApiScope" });
+                //客户端请求的 scope ∩ 客户端被允许的 scope ∩ 当前授权逻辑允许的 scope
+                principal.SetScopes(request.GetScopes());
+                
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 

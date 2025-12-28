@@ -51,6 +51,39 @@ namespace AccessHub.Infrastructure.Database
 
             modelBuilder.UseOpenIddict();
 
+            modelBuilder.Entity<OpenIddictEntityFrameworkCoreToken>(entity =>
+            {
+                entity.Property(t => t.Status)
+                    .HasMaxLength(50);
+
+                entity.Property(t => t.Subject)
+                    .HasMaxLength(255);
+
+                entity.Property(t => t.Type)
+                    .HasMaxLength(50);
+            });
+            modelBuilder.Entity<OpenIddictEntityFrameworkCoreApplication>(entity =>
+            {
+                entity.Property(a => a.ClientId)
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.ClientSecret)
+                    .HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<OpenIddictEntityFrameworkCoreScope>(entity =>
+            {
+                entity.Property(s => s.Name)
+                    .HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<OpenIddictEntityFrameworkCoreAuthorization>(entity =>
+            {
+                entity.Property(a => a.Subject)
+                    .HasMaxLength(255);
+            });
+
+
             //集中配置model
             //modelBuilder.Entity<User>(entity =>
             //{

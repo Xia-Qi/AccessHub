@@ -14,8 +14,16 @@ namespace AccessHub.Infrastructure.Database
             var optionsBuilder = new DbContextOptionsBuilder<AccessHubDbContext>();
             // 替换为你的 MySQL 连接字符串
             optionsBuilder.UseMySql(
-                "Server=localhost;Database=test222;User=root;Password=123456;SSLMode=none",
-                new MySqlServerVersion(new Version(8, 0, 36))
+                
+    "Server=localhost;" +
+    "Port=3306;" +
+    "Database=accesshub;" +
+    "User=appuser;" +
+    "Password=123456;" +
+    "AllowPublicKeyRetrieval=True;" +
+    "SslMode=None;"
+,
+                new MySqlServerVersion(new Version(8, 0, 44))
             );
 
             // 设计时不需要拦截器，可传 null 或 new DummyInterceptor()
