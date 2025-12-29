@@ -24,7 +24,7 @@ namespace WebClient1.Pages
         }
         public IActionResult RedirectLogin()
         {
-            Redirect("localhost://5700/login")
+            return Redirect("localhost://5700/login");
         }
     }
 }

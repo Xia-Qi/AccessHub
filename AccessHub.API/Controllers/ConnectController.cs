@@ -25,14 +25,16 @@ namespace AccessHub.API.Controllers
         /// </summary>
         private readonly IUserRepository _users;
         private readonly IOpenIddictApplicationManager _applicationManager;
+        private readonly IOpenIddictScopeManager _scopeManager;
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectController"/> class.
         /// </summary>
         /// <param name="users">The users<see cref="IUserRepository"/></param>
-        public ConnectController(IUserRepository users, IOpenIddictApplicationManager applicationManager)
+        public ConnectController(IUserRepository users, IOpenIddictApplicationManager applicationManager, IOpenIddictScopeManager scopeManager)
         {
             _users = users;
             _applicationManager = applicationManager;
+            _scopeManager = scopeManager;
         }
 
         /// <summary>
@@ -108,7 +110,7 @@ namespace AccessHub.API.Controllers
                 var allowedScopes = (await _applicationManager.GetPermissionsAsync(application))
                     .Where(p => p.StartsWith(Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
                     .Select(p => p.Substring(Permissions.Prefixes.Scope.Length)).ToImmutableArray();
-                // 最终授权 scopes
+                // 最终授权 scopes。客户端请求的 scope ∩ 客户端被允许的 scope ∩ 当前授权逻辑允许的 scope
                 var scopes = requestedScopes.Intersect(allowedScopes);
 
                 // 创建一个新的ClaimsIdentity，其中包含用于生
@@ -137,8 +139,16 @@ namespace AccessHub.API.Controllers
                 });
 
                 var principal = new ClaimsPrincipal(identity);
-                //客户端请求的 scope ∩ 客户端被允许的 scope ∩ 当前授权逻辑允许的 scope
-                principal.SetScopes(request.GetScopes());
+                principal.SetScopes(scopes);
+                var resources = new List<string>();
+                foreach (var scope in scopes)
+                {   var scopeObj = await _scopeManager.FindByNameAsync(scope);
+                    if (scopeObj == null)
+                        continue;
+                    var resource = await _scopeManager.GetResourcesAsync(scopeObj);
+                    resources.AddRange(resource);
+                }
+                principal.SetAudiences(resources); //principal.SetResources("ahbapi");
                 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
