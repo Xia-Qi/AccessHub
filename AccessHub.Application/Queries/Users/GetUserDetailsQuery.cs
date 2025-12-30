@@ -3,7 +3,7 @@ using MediatR;
 
 namespace AccessHub.Application.Queries.Users
 {
-    public class GetUserDetailsQuery : IRequest<User>
+    public class GetUserDetailsQuery : IRequest<UserDetailsDto>
     {
         public string Username { get; set; } = string.Empty;
 

@@ -4,7 +4,7 @@ using MediatR;
 
 namespace AccessHub.Application.Queries.Users
 {
-    public class GetUserDetailsQueryHandler : IRequestHandler<GetUserDetailsQuery, User>
+    public class GetUserDetailsQueryHandler : IRequestHandler<GetUserDetailsQuery, UserDetailsDto>
     {
         private readonly IUserRepository _userRepository;
 
@@ -21,7 +21,14 @@ namespace AccessHub.Application.Queries.Users
             if (user == null)
                 throw new Exception($"User {request.Username} not found");
 
-            return user;
+            return new UserDetailsDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsActive = user.IsActive,
+                Roles = user.Roles.Select(r => r.Name).ToList()
+            };
         }
     }
 }

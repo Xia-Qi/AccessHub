@@ -22,5 +22,37 @@ namespace AccessHub.API.Controllers
             var user = await _mediator.Send(new GetUserDetailsQuery("test"));
             return Ok(user.Name);
         }
+        [HttpGet("{username}")]
+        [Authorize(Policy = "UserRead")]
+        public async Task<IActionResult> Get(string username)
+        {
+            var result = await _mediator.Send(new GetUserDetailsQuery(username));
+            return Ok(result);
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "UserCreate")]
+        public async Task<IActionResult> Create([FromBody] CreateUserCommand command)
+        {
+            var userId = await _mediator.Send(command);
+            return CreatedAtAction(nameof(Get), new { username = command.Username }, new { id = userId.Value });
+        }
+
+        [HttpPut("{id}")]
+        [Authorize(Policy = "UserUpdate")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserCommand command)
+        {
+            command.UserId = id;
+            await _mediator.Send(command);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "UserDelete")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _mediator.Send(new DeleteUserCommand { UserId = id });
+            return NoContent();
+        }
     }
 }

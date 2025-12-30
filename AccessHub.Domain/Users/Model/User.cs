@@ -12,8 +12,8 @@ namespace AccessHub.Domain.Users.Model
         public PhoneNumber PhoneNumber {  get; private set; }
         public DateTime? LockoutEnd { get; private set; }
         public bool IsActive { get; private set; }
-        //µ±ÄãÊ¹ÓÃ¡°×Ô¶¨ÒåÖÐ¼ä±íÊµÌå(UserRole)¡±Ê±£¬EF Core ²»ÔÊÐíÄãÔÙÖ±½Ó×ö Many-to-Many£¬Ëü»áÍË»¯ÎªÁ½¸ö One-to-Many + One-to-Many¡£
-        //ÕâÊ±£¬ÔÙ°üº¬¸ÃRoles£¬»á³öÏÖÄ£ÐÍ³åÍ»£¨EF ²»ÖªµÀÄãÊÇÒª×Ô¶¯¶à¶Ô¶à»¹ÊÇÊÖ¶¯¶à¶Ô¶à£©¡£Ìæ»»ÎªÖÐ¼ä±íUserRoles.
+        //ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã¡ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½Êµï¿½ï¿½(UserRole)ï¿½ï¿½Ê±ï¿½ï¿½EF Core ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ Many-to-Manyï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë»ï¿½Îªï¿½ï¿½ï¿½ï¿½ One-to-Many + One-to-Manyï¿½ï¿½
+        //ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ù°ï¿½ï¿½ï¿½ï¿½ï¿½Rolesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½Í³ï¿½Í»ï¿½ï¿½EF ï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Ô¶ï¿½ï¿½ï¿½Ô¶à»¹ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½Ô¶à£©ï¿½ï¿½ï¿½æ»»Îªï¿½Ð¼ï¿½ï¿½UserRoles.
         //public ICollection<Role> Roles { get; } = [];
         public ICollection<UserRole> UserRoles { get; } = [];
         public bool IsDeleted { get; set; }
@@ -21,7 +21,7 @@ namespace AccessHub.Domain.Users.Model
         private User() { }//EF reach out
 
         /// <summary>
-        /// ´´½¨ÐÂµÄuser
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½user
         /// </summary>
         /// <param name="username"></param>
         /// <param name="email"></param>
@@ -45,6 +45,35 @@ namespace AccessHub.Domain.Users.Model
             return rawPassword == PasswordHash;
             //return BCrypt.Net.BCrypt.Verify(rawPassword, PasswordHash);
         }
+        public void UpdateEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new DomainException("Email cannot be empty");
+            
+            Email = email;
+        }
 
+        public void UpdatePhoneNumber(string phoneNumber)
+        {
+            PhoneNumber = new PhoneNumber(phoneNumber);
+        }
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
+
+        public void Activate()
+        {
+            IsActive = true;
+        }
+        public void SoftDelete()
+        {
+            if (IsDeleted)
+                throw new DomainException("User is already deleted");
+            
+            IsDeleted = true;
+            AddDomainEvent(new UserDeletedDomainEvent(Id, Name));
+        }
     }
 }
