@@ -1,5 +1,6 @@
 using Domain.Base;
 using Microsoft.AspNetCore.Http;
+using OpenIddict.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,6 @@ namespace AccessHub.Infrastructure.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
     }
 }

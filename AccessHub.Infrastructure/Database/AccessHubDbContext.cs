@@ -13,8 +13,8 @@ namespace AccessHub.Infrastructure.Database
 {
     public class AccessHubDbContext : DbContext
     {
-        private readonly IInterceptor _auditableEntitySaveChangesInterceptor;
-        public AccessHubDbContext(DbContextOptions<AccessHubDbContext> options, IInterceptor auditableEntitySaveChangesInterceptor) : base(options)
+        private readonly AuditableEntitySaveChangesInterceptor _auditableEntitySaveChangesInterceptor;
+        public AccessHubDbContext(DbContextOptions<AccessHubDbContext> options, AuditableEntitySaveChangesInterceptor auditableEntitySaveChangesInterceptor) : base(options)
         {
             _auditableEntitySaveChangesInterceptor = auditableEntitySaveChangesInterceptor;
         }

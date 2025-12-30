@@ -31,7 +31,8 @@ namespace AccessHub.Infrastructure.Repository
         /// <returns>The <see cref="Task"/></returns>
         public Task AddAsync(User aggregate)
         {
-            throw new NotImplementedException();
+            _dbContext.Users.Add(aggregate);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -41,7 +42,8 @@ namespace AccessHub.Infrastructure.Repository
         /// <returns>The <see cref="Task"/></returns>
         public Task DeleteAsync(User aggregate)
         {
-            throw new NotImplementedException();
+            _dbContext.Users.Remove(aggregate);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -50,9 +52,10 @@ namespace AccessHub.Infrastructure.Repository
         /// <param name="username">The username<see cref="string"/></param>
         /// <param name="email">The email<see cref="string"/></param>
         /// <returns>The <see cref="Task{bool}"/></returns>
-        public Task<bool> ExistsAsync(string username, string email)
+        public async Task<bool> ExistsAsync(string username, string email)
         {
-            throw new NotImplementedException();
+            return await _dbContext.Users
+                .AnyAsync(u => u.Name == username || u.Email == email);
         }
 
         /// <summary>
@@ -60,9 +63,13 @@ namespace AccessHub.Infrastructure.Repository
         /// </summary>
         /// <param name="email">The email<see cref="string"/></param>
         /// <returns>The <see cref="Task{User}"/></returns>
-        public Task<User> GetByEmailAsync(string email)
+        public async Task<User> GetByEmailAsync(string email)
         {
-            throw new NotImplementedException();
+            return await _dbContext.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .ThenInclude(r => r.RolePermissions)
+                .FirstOrDefaultAsync(x => x.Email == email);
         }
 
         /// <summary>
@@ -70,9 +77,13 @@ namespace AccessHub.Infrastructure.Repository
         /// </summary>
         /// <param name="id">The id<see cref="UserId"/></param>
         /// <returns>The <see cref="Task{User}"/></returns>
-        public Task<User> GetByIdAsync(UserId id)
+        public async Task<User> GetByIdAsync(UserId id)
         {
-            throw new NotImplementedException();
+            return await _dbContext.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .ThenInclude(r => r.RolePermissions)
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
 
         /// <summary>
@@ -80,15 +91,13 @@ namespace AccessHub.Infrastructure.Repository
         /// </summary>
         /// <param name="username">The username<see cref="string"/></param>
         /// <returns>The <see cref="Task{User}"/></returns>
-        public Task<User> GetByUsernameAsync(string username)
+        public async Task<User> GetByUsernameAsync(string username)
         {
-            var user = _dbContext.Users
+            return await _dbContext.Users
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
                 .ThenInclude(r => r.RolePermissions)
-                .FirstOrDefault(x => x.Name == username);
-
-            return Task.FromResult(user);
+                .FirstOrDefaultAsync(x => x.Name == username);
         }
 
         /// <summary>
@@ -98,7 +107,8 @@ namespace AccessHub.Infrastructure.Repository
         /// <returns>The <see cref="Task"/></returns>
         public Task UpdateAsync(User aggregate)
         {
-            throw new NotImplementedException();
+            _dbContext.Users.Update(aggregate);
+            return Task.CompletedTask;
         }
     }
 }

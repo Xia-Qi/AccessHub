@@ -19,9 +19,23 @@ namespace AccessHub.Infrastructure.Database
         {
             _currentUserService = currentUserService;
         }
+        // 对应 DbContext.SaveChanges
         public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
         {
-            var context = eventData.Context;
+            UpdateAuditableEntities(eventData.Context);
+
+            return base.SavingChanges(eventData, result);
+        }
+
+        // 对应 DbContext.SaveChangesAsync
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            UpdateAuditableEntities(eventData.Context);
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+
+        private void UpdateAuditableEntities(DbContext context)
+        {
             var entries = context.ChangeTracker.Entries<IAuditableEntity>();
 
             foreach (var entry in entries)
@@ -37,8 +51,6 @@ namespace AccessHub.Infrastructure.Database
                     entry.Entity.LastModifiedBy = _currentUserService.UserId;
                 }
             }
-
-            return base.SavingChanges(eventData, result);
         }
 
     }

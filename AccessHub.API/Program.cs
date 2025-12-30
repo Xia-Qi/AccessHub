@@ -1,4 +1,5 @@
 using System.Reflection;
+using AccessHub.Domain;
 using AccessHub.Infrastructure.Database;
 using AccessHub.Infrastructure.OpenIddict;
 using Microsoft.OpenApi;
@@ -34,6 +35,24 @@ builder.Services.AddAuthorization(options =>
         {
             return context.User.HasClaim(c =>
                 c.Type == "scope" && c.Value.Split(' ',StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.read"));
+        });
+    });
+    options.AddPolicy("UserWrite", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            return context.User.HasClaim(c =>
+                c.Type == "scope" && c.Value.Split(' ',StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.write"));
+        });
+    });
+    options.AddPolicy("UserDelete", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            return context.User.HasClaim(c =>
+                c.Type == "scope" && c.Value.Split(' ',StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.delete"));
         });
     });
 });
@@ -76,6 +95,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+        c.OAuthClientId("userManageClient");
+        c.OAuthClientSecret("userManageClient-secret");
+        //c.OAuthUsePkce();
         //c.RoutePrefix = "api-docs"; // 自定义访问路径
     });
 }
@@ -97,6 +119,24 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+app.UseExceptionHandler(errApp =>
+{
+    errApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+
+        var errorFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        if (errorFeature != null && errorFeature.Error is DomainException dex)
+        {
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "application/json";
+            
+            var result = System.Text.Json.JsonSerializer.Serialize(new {code = 1001, error = dex.Message });
+            await context.Response.WriteAsync(result);
+        }
+    });
+});
 
 app.UseRouting();
 app.UseAuthentication();

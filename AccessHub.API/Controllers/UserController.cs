@@ -1,3 +1,4 @@
+using AccessHub.Application.Commands.Users;
 using AccessHub.Application.Queries.Users;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -19,8 +20,7 @@ namespace AccessHub.API.Controllers
         [Authorize(Policy = "UserRead")]
         public async Task<IActionResult> Index()
         {
-            var user = await _mediator.Send(new GetUserDetailsQuery("test"));
-            return Ok(user.Name);
+            return Ok("test");
         }
         [HttpGet("{username}")]
         [Authorize(Policy = "UserRead")]
@@ -31,20 +31,20 @@ namespace AccessHub.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "UserCreate")]
+        [Authorize(Policy = "UserWrite")]
         public async Task<IActionResult> Create([FromBody] CreateUserCommand command)
         {
             var userId = await _mediator.Send(command);
-            return CreatedAtAction(nameof(Get), new { username = command.Username }, new { id = userId.Value });
+            return Ok(new { id = userId.Value });
         }
 
         [HttpPut("{id}")]
-        [Authorize(Policy = "UserUpdate")]
+        [Authorize(Policy = "UserWrite")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserCommand command)
         {
             command.UserId = id;
             await _mediator.Send(command);
-            return NoContent();
+            return Ok();
         }
 
         [HttpDelete("{id}")]
@@ -52,7 +52,7 @@ namespace AccessHub.API.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteUserCommand { UserId = id });
-            return NoContent();
+            return Ok();
         }
     }
 }

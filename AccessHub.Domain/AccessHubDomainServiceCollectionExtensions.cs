@@ -13,7 +13,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddAccessHubDomain(this IServiceCollection services)
         {
             services.TryAddScoped<UserDomainService>();
-            //TODO: 注入默认 passwordHasher
+            //注入默认 passwordHasher
             services.TryAddScoped<IPasswordHasher, DefaultPasswordHasher>();
             return services;
         }

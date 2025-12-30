@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Security.Claims;
 using AccessHub.Domain.Users;
+using AccessHub.Domain.Users.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -26,15 +27,18 @@ namespace AccessHub.API.Controllers
         private readonly IUserRepository _users;
         private readonly IOpenIddictApplicationManager _applicationManager;
         private readonly IOpenIddictScopeManager _scopeManager;
+        private readonly IPasswordHasher _passwordHasher;
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectController"/> class.
         /// </summary>
         /// <param name="users">The users<see cref="IUserRepository"/></param>
-        public ConnectController(IUserRepository users, IOpenIddictApplicationManager applicationManager, IOpenIddictScopeManager scopeManager)
+        public ConnectController(IUserRepository users, IOpenIddictApplicationManager applicationManager, IOpenIddictScopeManager scopeManager,
+            IPasswordHasher passwordHasher)
         {
             _users = users;
             _applicationManager = applicationManager;
             _scopeManager = scopeManager;
+            _passwordHasher = passwordHasher;
         }
 
         /// <summary>
@@ -57,7 +61,7 @@ namespace AccessHub.API.Controllers
             if (request.IsPasswordGrantType())
             {
                 var user = await _users.GetByUsernameAsync(request.Username!);
-                if (user == null || !user.ValidatePassword(request.Password!))
+                if (user == null || !_passwordHasher.VerifyPassword(request.Password!,user.PasswordHash))
                     return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
                 var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);

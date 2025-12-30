@@ -23,9 +23,9 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddScoped<IUserRepository, UserRepository>();//services.TryAddSingleton<IUserRepository, UserRepository>();
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
             services.TryAddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IInterceptor, AuditableEntitySaveChangesInterceptor>();
+            services.AddScoped<AuditableEntitySaveChangesInterceptor>();
 
-            services.AddDbContext<AccessHubDbContext>(options =>
+            services.AddDbContext<AccessHubDbContext>((sp,options) =>
             {
                 //options.UseSqlServer(
                 //    configuration.GetConnectionString("DefaultConnection"),

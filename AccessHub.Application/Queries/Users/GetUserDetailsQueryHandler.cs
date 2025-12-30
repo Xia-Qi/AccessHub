@@ -1,3 +1,4 @@
+using AccessHub.Domain;
 using AccessHub.Domain.Users;
 using AccessHub.Domain.Users.Model;
 using MediatR;
@@ -13,21 +14,21 @@ namespace AccessHub.Application.Queries.Users
             _userRepository = userRepository;
         }
 
-        public async Task<User> Handle(GetUserDetailsQuery request, CancellationToken cancellationToken)
+        public async Task<UserDetailsDto> Handle(GetUserDetailsQuery request, CancellationToken cancellationToken)
         {
 
             var user = await _userRepository.GetByUsernameAsync(request.Username);
 
             if (user == null)
-                throw new Exception($"User {request.Username} not found");
+                throw new DomainException($"User {request.Username} not found");
 
             return new UserDetailsDto
             {
-                Id = user.Id,
-                Username = user.Username,
+                Id = user.Id.Value,
+                Username = user.Name,
                 Email = user.Email,
                 IsActive = user.IsActive,
-                Roles = user.Roles.Select(r => r.Name).ToList()
+                Roles = user.UserRoles.Select(r => r.Role.Name).ToList()
             };
         }
     }

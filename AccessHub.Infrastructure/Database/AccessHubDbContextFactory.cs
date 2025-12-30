@@ -27,7 +27,7 @@ namespace AccessHub.Infrastructure.Database
             );
 
             // 设计时不需要拦截器，可传 null 或 new DummyInterceptor()
-            return new AccessHubDbContext(optionsBuilder.Options, new DummyInterceptor());
+            return new AccessHubDbContext(optionsBuilder.Options, null);
         }
     }
 

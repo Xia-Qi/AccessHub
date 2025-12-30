@@ -22,23 +22,23 @@ namespace AccessHub.API.Pages.Account
         {
             ReturnUrl = returnUrl;
         }
-//        2£©ÓÃ»§ÔÚ AccessHub µÇÂ¼£¨Cookie£©
+//        2ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ AccessHub ï¿½ï¿½Â¼ï¿½ï¿½Cookieï¿½ï¿½
 
-//AccessHub ²úÉú Cookie£¨½öÓÃÓÚ AccessHub ×Ô¼º£©¡£
+//AccessHub ï¿½ï¿½ï¿½ï¿½ Cookieï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ AccessHub ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½
         public async Task<IActionResult> OnPost()
         {
-            // ´¦ÀíµÇÂ¼Âß¼­
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ß¼ï¿½
 
             var user = await _mediator.Send(new GetUserDetailsQuery(Input.Username));
             if (user == null) return Page();
-            if(!user.ValidatePassword(Input.Password))
-            { return Page();
-            }
+            // if(!user.ValidatePassword(Input.Password))
+            // { return Page();
+            // }
             //HttpContext.SignInAsync();
             //var result = await _signInManager.PasswordSignInAsync(Input.Username, Input.Password, false, false);iio
             //if (!result.Succeeded) return Page();
 
-            // µÇÂ¼³É¹¦ºó»Øµ½ authorize Ô­Ê¼µØÖ·
+            // ï¿½ï¿½Â¼ï¿½É¹ï¿½ï¿½ï¿½Øµï¿½ authorize Ô­Ê¼ï¿½ï¿½Ö·
             return LocalRedirect(ReturnUrl);
         }
     }

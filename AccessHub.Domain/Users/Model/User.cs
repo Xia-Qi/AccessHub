@@ -73,7 +73,7 @@ namespace AccessHub.Domain.Users.Model
                 throw new DomainException("User is already deleted");
             
             IsDeleted = true;
-            AddDomainEvent(new UserDeletedDomainEvent(Id, Name));
+            //AddDomainEvent(new UserDeletedDomainEvent(Id, Name));
         }
     }
 }
