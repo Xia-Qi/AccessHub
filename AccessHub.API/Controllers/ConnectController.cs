@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
-using Polly;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace AccessHub.API.Controllers
@@ -61,7 +60,7 @@ namespace AccessHub.API.Controllers
             if (request.IsPasswordGrantType())
             {
                 var user = await _users.GetByUsernameAsync(request.Username!);
-                if (user == null || !_passwordHasher.VerifyPassword(request.Password!,user.PasswordHash))
+                if (user == null || !_passwordHasher.VerifyPassword(request.Password!, user.PasswordHash))
                     return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
                 var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -146,14 +145,15 @@ namespace AccessHub.API.Controllers
                 principal.SetScopes(scopes);
                 var resources = new List<string>();
                 foreach (var scope in scopes)
-                {   var scopeObj = await _scopeManager.FindByNameAsync(scope);
+                {
+                    var scopeObj = await _scopeManager.FindByNameAsync(scope);
                     if (scopeObj == null)
                         continue;
                     var resource = await _scopeManager.GetResourcesAsync(scopeObj);
                     resources.AddRange(resource);
                 }
                 principal.SetAudiences(resources); //principal.SetResources("ahbapi");
-                
+
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
@@ -175,10 +175,11 @@ namespace AccessHub.API.Controllers
         /// </summary>
         /// <returns>The <see cref="Task{IActionResult}"/></returns>
         [HttpGet("/connect/authorize")]
-        public async Task Authorize()
+        [HttpPost("/connect/authorize")]
+        public async Task<IActionResult> Authorize()
         {
-            // 简化：若用户已登录（cookie），直接颁发 code；否则重定向到登录页面。
-            var request = HttpContext.GetOpenIddictServerRequest()!;
+            var request = HttpContext.GetOpenIddictServerRequest() ??
+            throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
             var result = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
 
             if (!result.Succeeded)
@@ -186,29 +187,96 @@ namespace AccessHub.API.Controllers
                 // 用户未登录 → 显示登录页
                 var props = new AuthenticationProperties
                 {
-                    RedirectUri = HttpContext.Request.Path + HttpContext.Request.QueryString
+                    RedirectUri = Request.PathBase + Request.Path + QueryString.Create(
+                    Request.HasFormContentType ? Request.Form : Request.Query)
                 };
 
-                await HttpContext.ChallengeAsync(
-                    IdentityConstants.ApplicationScheme, props); //跳转到登录页（Razor）,默认Account/Login.cshtml,可在openiddict配置中修改
+                return Challenge(props,
+                    IdentityConstants.ApplicationScheme); //跳转到登录页（Razor）,默认Account/Login.cshtml,可在openiddict配置中修改
 
-                return;
             }
 
             // 用户已登录 → 继续授权
-            var principal = result.Principal!;
-            principal.SetScopes(request.GetScopes());
+            //var principal = result.Principal!;
+            // principal.SetScopes(request.GetScopes());
+            var identity = await CreateIdentity(request);
 
-            await HttpContext.SignInAsync(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, principal);
+            return SignIn(
+                new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
             // 这里你可以实现自己的登录界面流程，示例直接返回 200
             //return Ok(new { message = "Authorization endpoint - implement UI/UX here." });
         }
+        [HttpPost("/connect/logout")]
+        public IActionResult Logout()
+        {
+            return Ok();
+        }
+        [HttpGet("/connect/userinfo")]
+        public IActionResult Userinfo()
+        {
+            return Ok();
+        }
+
         [HttpGet("/connect/device")]
         public IActionResult Device()
         {
             return Ok();
+        }
+        private async Task<ClaimsIdentity> CreateIdentity(OpenIddictRequest request)
+        {
+            var application = await _applicationManager.FindByClientIdAsync(request.ClientId) ??
+                    throw new InvalidOperationException("The application cannot be found.");
+
+            var clientId = await _applicationManager.GetClientIdAsync(application);
+
+            // requestedScopes:客户端请求的 scopes; allowedScopes:客户端被允许的 scopes;
+            var requestedScopes = request.GetScopes();
+            var allowedScopes = (await _applicationManager.GetPermissionsAsync(application))
+                .Where(p => p.StartsWith(Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
+                .Select(p => p.Substring(Permissions.Prefixes.Scope.Length)).ToImmutableArray();
+            // 最终授权 scopes。客户端请求的 scope ∩ 客户端被允许的 scope ∩ 当前授权逻辑允许的 scope
+            var scopes = requestedScopes.Intersect(allowedScopes);
+
+            // 创建一个新的ClaimsIdentity，其中包含用于生
+            // 成 id_token、token 或 code的声明.
+            var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
+
+            // 使用 client_id 作为主题标识符
+            identity.AddClaim(Claims.Subject, clientId);
+            identity.AddClaim(Claims.ClientId, clientId);
+            //identity.AddClaim("tenant_id", tenantId);
+
+            identity.SetDestinations(static claim => claim.Type switch
+            {
+                "tenant_id" => new[]
+                {
+                        Destinations.AccessToken
+                },
+
+                Claims.Subject => new[]
+                {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                },
+
+                _ => Array.Empty<string>()
+            });
+
+            var principal = new ClaimsPrincipal(identity);
+            principal.SetScopes(scopes);
+            var resources = new List<string>();
+            foreach (var scope in scopes)
+            {
+                var scopeObj = await _scopeManager.FindByNameAsync(scope);
+                if (scopeObj == null)
+                    continue;
+                var resource = await _scopeManager.GetResourcesAsync(scopeObj);
+                resources.AddRange(resource);
+            }
+            principal.SetAudiences(resources); //principal.SetResources("ahbapi");
+
+            return identity;
         }
     }
 }

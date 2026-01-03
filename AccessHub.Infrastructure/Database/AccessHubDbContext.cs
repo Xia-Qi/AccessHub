@@ -60,7 +60,7 @@ namespace AccessHub.Infrastructure.Database
                     .HasMaxLength(255);
 
                 entity.Property(t => t.Type)
-                    .HasMaxLength(50);
+                    .HasMaxLength(100);
             });
             modelBuilder.Entity<OpenIddictEntityFrameworkCoreApplication>(entity =>
             {
@@ -81,6 +81,8 @@ namespace AccessHub.Infrastructure.Database
             {
                 entity.Property(a => a.Subject)
                     .HasMaxLength(255);
+                entity.Property(a => a.Type)
+                    .HasMaxLength(100);
             });
 
 

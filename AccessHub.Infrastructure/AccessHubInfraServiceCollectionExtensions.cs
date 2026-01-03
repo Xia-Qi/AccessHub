@@ -56,16 +56,18 @@ namespace Microsoft.Extensions.DependencyInjection
                     // 2. 启用授权端点
                     opt.SetTokenEndpointUris("/connect/token");
                     opt.SetAuthorizationEndpointUris("/connect/authorize");
+                    opt.SetEndSessionEndpointUris("/connect/logout");
+                    opt.SetUserInfoEndpointUris("/connect/userinfo");
                     opt.SetDeviceAuthorizationEndpointUris("/connect/device"); //设备码端点1/2
                     opt.SetEndUserVerificationEndpointUris("/connect/verify"); //设备码端点2/2
                     // 3. 启用支持的授权模式
                     opt.AllowAuthorizationCodeFlow();// 授权码流
-                    opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();// 启用授权码模式 + PKCE
+                    opt.AllowAuthorizationCodeFlow();//.RequireProofKeyForCodeExchange();// 启用授权码模式 + PKCE
                     opt.AllowClientCredentialsFlow();// 客户端凭据流
                     opt.AllowRefreshTokenFlow();// 刷新令牌流
                     opt.AllowDeviceAuthorizationFlow();// 设备流
                     // 4. 令牌配置
-                    opt.RegisterScopes("ahbapi.user.read", "ahbapi.user.write","ahbapi.user.delete") // 注册作用域，作用域在令牌中表示访问权限。（实际项目应该根据permissions来注册作用域）
+                    opt//.RegisterScopes("ahbapi.user.read", "ahbapi.user.write","ahbapi.user.delete") // 注册作用域，作用域在令牌中表示访问权限。（实际项目应该根据permissions来注册作用域）
                            .SetAccessTokenLifetime(TimeSpan.FromHours(1));
 
                     // 5. 安全配置
@@ -79,7 +81,9 @@ namespace Microsoft.Extensions.DependencyInjection
                     // 6. ASP.NET Core集成（注册 ASP.NET Core 主机并且配置 ASP.NET Core 选项）
                     opt.UseAspNetCore()
                        .EnableAuthorizationEndpointPassthrough()//允许你自己定义控制器/逻辑来处理授权 UI 或 token 响应，而不是 OpenIddict 内建页面
-                       .EnableTokenEndpointPassthrough();
+                       .EnableTokenEndpointPassthrough()
+                       .EnableEndSessionEndpointPassthrough()
+                       .EnableUserInfoEndpointPassthrough();
 
                     // 其它：安全防护相关配置
                 });

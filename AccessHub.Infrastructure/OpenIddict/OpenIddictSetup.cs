@@ -40,6 +40,56 @@ namespace AccessHub.Infrastructure.OpenIddict
 
                 });
             }
+            if (await appManager.FindByClientIdAsync("userManageWebClient") == null)
+            {
+                await appManager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "userManageWebClient",
+                    ClientSecret = "userManageWebClient-secret",
+                    DisplayName = "User Management Web Client (Pure Admin)",
+                    RedirectUris = 
+                    { 
+                        new Uri("http://localhost:8848/callback"),
+                        new Uri("http://localhost:8848/callback/"),
+                        new Uri("http://127.0.0.1:8848/callback"),
+                        new Uri("http://127.0.0.1:8848/callback/"),
+                        new Uri("http://192.168.172.128:8848/callback"),
+                        new Uri("http://192.168.172.128:8848/callback/")
+                    },
+                    PostLogoutRedirectUris = 
+                    { 
+                        new Uri("http://localhost:8848/login"),
+                        new Uri("http://localhost:8848/login/"),
+                        new Uri("http://127.0.0.1:8848/login"),
+                        new Uri("http://127.0.0.1:8848/login/"),
+                        new Uri("http://192.168.172.128:8848/login"),
+                        new Uri("http://192.168.172.128:8848/login/")
+                    },
+                    Permissions =
+                    {
+                        Permissions.Endpoints.Authorization,
+                        Permissions.Endpoints.Token,
+                        //Permissions.Endpoints.Logout,
+                        Permissions.Endpoints.Revocation,
+                        Permissions.GrantTypes.AuthorizationCode,
+                        Permissions.GrantTypes.RefreshToken,
+                        Permissions.ResponseTypes.Code,
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "openid",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "profile",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "email",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "roles",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.read",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.write",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.delete",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                        //Permissions.Prefixes.CodeChallenge + "S256"
+                    },
+                    // Requirements =
+                    // {
+                    //     Requirements.Features.ProofKeyForCodeExchange
+                    // }
+                });
+            }
             var scopeManager = sp.GetRequiredService<IOpenIddictScopeManager>();
             if (await scopeManager.FindByNameAsync("ahbapi.user.read") == null)
             {

@@ -2,6 +2,7 @@ using System.Reflection;
 using AccessHub.Domain;
 using AccessHub.Infrastructure.Database;
 using AccessHub.Infrastructure.OpenIddict;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
 using OpenIddict.Validation.AspNetCore;
 
@@ -17,14 +18,20 @@ builder.Services.AddOpenIddict()
     .AddValidation(opt =>
                 {
                     opt.AddAudiences("ahbapi");
-                    // 从本地 OpenIddict 服务器实例导入配置,当授权服务和api在同一进程中时使用。
                     opt.UseLocalServer();
                     //注册 ASP.NET Core 主机
                     //将验证系统挂到 ASP.NET Core Authentication 中,内部通过AddAuthentication().AddScheme()默认注入OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme。
                     //但不会默认成为全局 DefaultScheme， 需要手动指定services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
                     opt.UseAspNetCore();
                 });
-builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+.AddCookie(IdentityConstants.ApplicationScheme, options =>
+{
+    options.LoginPath = "/Account/Login";
+    //options.LogoutPath = "/Account/Logout";
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+});
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("UserRead", policy =>
@@ -34,7 +41,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAssertion(context =>
         {
             return context.User.HasClaim(c =>
-                c.Type == "scope" && c.Value.Split(' ',StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.read"));
+                c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.read"));
         });
     });
     options.AddPolicy("UserWrite", policy =>
@@ -43,7 +50,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAssertion(context =>
         {
             return context.User.HasClaim(c =>
-                c.Type == "scope" && c.Value.Split(' ',StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.write"));
+                c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.write"));
         });
     });
     options.AddPolicy("UserDelete", policy =>
@@ -52,13 +59,36 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAssertion(context =>
         {
             return context.User.HasClaim(c =>
-                c.Type == "scope" && c.Value.Split(' ',StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.delete"));
+                c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.delete"));
         });
     });
 });
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "X-CSRF-COOKIE";
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+});
+builder.Services.AddCors(options =>
+{
+    //TODO: 生产环境请配置具体域名等信息，避免使用AllowAnyOrigin等宽松配置
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+            "http://localhost:8848",
+            "http://127.0.0.1:8848",
+            "http://192.168.172.128:8848",
+            "https://192.168.172.128:8848"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+    });
+});
 
 // 添加 Swagger 服务
 builder.Services.AddEndpointsApiExplorer();
@@ -131,14 +161,16 @@ app.UseExceptionHandler(errApp =>
         {
             context.Response.StatusCode = 200;
             context.Response.ContentType = "application/json";
-            
-            var result = System.Text.Json.JsonSerializer.Serialize(new {code = 1001, error = dex.Message });
+
+            var result = System.Text.Json.JsonSerializer.Serialize(new { code = 1001, error = dex.Message });
             await context.Response.WriteAsync(result);
         }
     });
 });
 
 app.UseRouting();
+app.UseCors();
+app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
