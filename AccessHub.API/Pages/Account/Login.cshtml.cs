@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Antiforgery;
 using System.Security.Claims;
+using OpenIddict.Abstractions;
 
 namespace AccessHub.API.Pages.Account
 {
@@ -45,6 +46,7 @@ namespace AccessHub.API.Pages.Account
 
             var claims = new List<Claim>
             {
+                new Claim(OpenIddictConstants.Claims.Subject, user.Id.ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Email, user.Email)
@@ -52,7 +54,7 @@ namespace AccessHub.API.Pages.Account
 
             foreach (var role in user.Roles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim(OpenIddictConstants.Claims.Role, role));
             }
 
             var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);

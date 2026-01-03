@@ -74,14 +74,14 @@ namespace AccessHub.Infrastructure.OpenIddict
                         Permissions.GrantTypes.AuthorizationCode,
                         Permissions.GrantTypes.RefreshToken,
                         Permissions.ResponseTypes.Code,
-                        OpenIddictConstants.Permissions.Prefixes.Scope + "openid",
-                        OpenIddictConstants.Permissions.Prefixes.Scope + "profile",
-                        OpenIddictConstants.Permissions.Prefixes.Scope + "email",
-                        OpenIddictConstants.Permissions.Prefixes.Scope + "roles",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + Scopes.OpenId,
+                        OpenIddictConstants.Permissions.Prefixes.Scope + Scopes.Profile,
+                        OpenIddictConstants.Permissions.Prefixes.Scope + Scopes.Email,
+                        OpenIddictConstants.Permissions.Prefixes.Scope + Scopes.Roles,
                         OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.read",
                         OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.write",
                         OpenIddictConstants.Permissions.Prefixes.Scope + "ahbapi.user.delete",
-                        OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                        OpenIddictConstants.Permissions.Prefixes.Scope + Scopes.OfflineAccess,
                         //Permissions.Prefixes.CodeChallenge + "S256"
                     },
                     // Requirements =
@@ -120,6 +120,19 @@ namespace AccessHub.Infrastructure.OpenIddict
                     Resources = { "ahbapi" }    
                 }
                 );
+            }
+            //default scopes
+            var defaultScopes = new[] { Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess };
+            foreach (var scope in defaultScopes)
+            {
+                if (await scopeManager.FindByNameAsync(scope) == null)
+                {
+                    await scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+                    {
+                        Name = scope,
+                        Resources = { "AccessHub" }
+                    });
+                }
             }
         }
     }

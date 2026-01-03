@@ -156,6 +156,81 @@ namespace AccessHub.API.Controllers
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
+            /* 3.授权码模式
+             * 最常用，用于有用户参与的Web应用
+             * 1. 客户端重定向到授权服务器获取授权码
+             * 2. 用户登录并授权
+             * 3. 授权服务器返回授权码
+             * 4. 客户端使用授权码换取访问令牌
+             * POST /connect/token
+                grant_type=authorization_code
+                code=xxx
+                redirect_uri=callback
+                client_id=xxx
+                client_secret=yyy
+             */
+            if (request.IsAuthorizationCodeGrantType())
+            {
+                // 注意：授权码会自动由OpenIddict进行验证：
+                // 如果授权码无效或已过期，此操作将不会被调用
+
+                // 获取当前请求的身份验证结果
+                var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // 获取与授权码关联的用户标识符
+                var userId = result.Principal?.FindFirstValue(Claims.Subject);
+                if (string.IsNullOrEmpty(userId))
+                    return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // 根据用户ID获取用户信息
+                var user = await _users.GetByIdAsync(new Domain.Users.Model.UserId(Guid.Parse(userId)));
+                if (user == null || user.IsDeleted || !user.IsActive)
+                    return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // 创建一个新的ClaimsIdentity
+                var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                identity.AddClaim(Claims.Subject, user.Id.Value.ToString());
+                identity.AddClaim(Claims.Name, user.Name);
+                identity.AddClaim(Claims.Email, user.Email);
+
+                // 设置声明的目标
+                identity.SetDestinations(static claim => claim.Type switch
+                {
+                    Claims.Name => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+                    Claims.Email => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+                    Claims.Subject => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+                    _ => Array.Empty<string>()
+                });
+
+                // 创建ClaimsPrincipal
+                var principal = new ClaimsPrincipal(identity);
+                
+                // 设置允许的作用域
+                principal.SetScopes(new[] 
+                {
+                    Scopes.OpenId, 
+                    Scopes.Email, 
+                    Scopes.Profile, 
+                    Scopes.Roles,
+                    "ahbapi.user.read",
+                    "ahbapi.user.write",
+                    "ahbapi.user.delete" 
+                });
+
+                return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
 
             return BadRequest();
         }
@@ -181,7 +256,8 @@ namespace AccessHub.API.Controllers
             var request = HttpContext.GetOpenIddictServerRequest() ??
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
             var result = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-
+            var t = request.IsAuthorizationCodeGrantType();
+            var t2 = request.GrantType;
             if (!result.Succeeded)
             {
                 // 用户未登录 → 显示登录页
@@ -200,7 +276,6 @@ namespace AccessHub.API.Controllers
             //var principal = result.Principal!;
             // principal.SetScopes(request.GetScopes());
             var identity = await CreateIdentity(request);
-
             return SignIn(
                 new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
