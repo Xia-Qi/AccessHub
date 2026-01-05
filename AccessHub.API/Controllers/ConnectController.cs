@@ -253,8 +253,23 @@ namespace AccessHub.API.Controllers
         [HttpPost("/connect/authorize")]
         public async Task<IActionResult> Authorize()
         {
-            var request = HttpContext.GetOpenIddictServerRequest() ??
-            throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+            var request = HttpContext.GetOpenIddictServerRequest()!;
+            // 确保用户已登录（cookie or Identity）
+            if (!User.Identity?.IsAuthenticated ?? true)
+                return Challenge(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+            // 根据 client 配置获取 ConsentType
+            var app = await _applicationManager.FindByClientIdAsync(request.ClientId!);
+            var consentType = await _applicationManager.GetConsentTypeAsync(app);
+
+            if (consentType == OpenIddictConstants.ConsentTypes.Explicit
+                || request.Prompt == OpenIddictConstants.Prompts.Consent)
+            {
+                // 显示 Consent 页面
+                var returnUrl = Request.Path + Request.QueryString;
+                return Redirect($"/Consent?returnUrl={Url.Encode(returnUrl)}");
+            }
+            
             var result = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
             var t = request.IsAuthorizationCodeGrantType();
             var t2 = request.GrantType;

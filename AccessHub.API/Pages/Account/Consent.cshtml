@@ -1,232 +1,27 @@
 @page
-@using AccessHub.API.Pages.Account
-@model AccessHub.API.Pages.Account.ConsentModel
+@model ConsentModel
 @{
+    ViewData["Title"] = "Authorize Application";
 }
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>授权确认</title>
-    <style>
-        :root {
-            --bg: #f3f4f6;
-            --card-bg: #ffffff;
-            --primary: #4f46e5;
-            --primary-dark: #4338ca;
-            --danger: #ef4444;
-            --danger-dark: #dc2626;
-            --text: #111827;
-            --text-light: #6b7280;
-            --border: #e5e7eb;
-            --radius: 16px;
-            --shadow: 0 10px 25px rgba(0,0,0,0.08);
-        }
+<h2>Authorize Application</h2>
 
-        body {
-            margin: 0;
-            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
-            background: var(--bg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+<p><strong>@Model.ApplicationName</strong> 请求访问你的账户数据:</p>
 
-        .card {
-            width: 100%;
-            max-width: 480px;
-            background: var(--card-bg);
-            padding: 40px 32px;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            animation: fadeIn 0.6s ease;
-        }
+<form method="post">
+    <input type="hidden" asp-for="ReturnUrl" />
+    <input type="hidden" asp-for="Scopes" />
 
-        @@keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h2 {
-            margin: 0 0 10px;
-            font-size: 26px;
-            color: var(--text);
-        }
-
-        .subtitle {
-            margin-bottom: 28px;
-            font-size: 14px;
-            color: var(--text-light);
-            line-height: 1.6;
-        }
-
-        .app-info {
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            border: 1px solid var(--border);
-        }
-
-        .app-name {
-            font-weight: 600;
-            font-size: 16px;
-            color: var(--text);
-            margin-bottom: 8px;
-        }
-
-        .app-url {
-            font-size: 13px;
-            color: var(--text-light);
-            word-break: break-all;
-        }
-
-        .scopes-section {
-            margin-bottom: 28px;
-        }
-
-        .scopes-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text);
-            margin-bottom: 12px;
-        }
-
-        .scope-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 12px;
-            background: #f9fafb;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .scope-icon {
-            width: 24px;
-            height: 24px;
-            background: var(--primary);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
-
-        .scope-content {
-            flex: 1;
-        }
-
-        .scope-name {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text);
-            margin-bottom: 4px;
-        }
-
-        .scope-desc {
-            font-size: 13px;
-            color: var(--text-light);
-            line-height: 1.4;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 12px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            border-radius: var(--radius);
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
-
-        .btn-danger {
-            background: white;
-            color: var(--danger);
-            border: 2px solid var(--danger);
-        }
-
-        .btn-danger:hover {
-            background: var(--danger);
-            color: white;
-        }
-
-        .warning-box {
-            background: #fef3c7;
-            border: 1px solid #fcd34d;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #92400e;
-            line-height: 1.5;
-        }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>授权确认</h2>
-        <div class="subtitle">
-            应用程序 <strong>@Model.ApplicationName</strong> 请求访问您的账户
+    <fieldset>
+    <legend>请求权限</legend>
+    @foreach (var scope in Model.Scopes)
+    {
+        <div>
+            <input type="checkbox" checked disabled />
+            <label>@scope</label>
         </div>
+    }
+    </fieldset>
 
-        <div class="app-info">
-            <div class="app-name">@Model.ApplicationName</div>
-            <div class="app-url">Client ID: @Model.ClientId</div>
-        </div>
-
-        <div class="scopes-section">
-            <div class="scopes-title">请求的权限</div>
-            
-            @foreach (var scope in Model.RequestedScopes)
-            {
-                <div class="scope-item">
-                    <div class="scope-icon">✓</div>
-                    <div class="scope-content">
-                        <div class="scope-name">@scope.Name</div>
-                        <div class="scope-desc">@scope.Description</div>
-                    </div>
-                </div>
-            }
-        </div>
-
-        <div class="warning-box">
-            ⚠️ 授权后，该应用将能够访问您账户的相关信息。请确保您信任此应用。
-        </div>
-
-        <form method="post">
-            <div class="button-group">
-                <button type="submit" name="button" value="deny" class="btn btn-danger">
-                    拒绝
-                </button>
-                <button type="submit" name="button" value="accept" class="btn btn-primary">
-                    同意授权
-                </button>
-            </div>
-        </form>
-    </div>
-</body>
-</html>
+    <button type="submit" name="action" value="yes">同意授权</button>
+    <button type="submit" name="action" value="no">拒绝授权</button>
+</form>
