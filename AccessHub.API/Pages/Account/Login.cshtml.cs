@@ -1,13 +1,14 @@
 using AccessHub.Application.Queries.Users;
 using AccessHub.Domain.Users.Model;
 using MediatR;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Antiforgery;
-using System.Security.Claims;
 using OpenIddict.Abstractions;
+using System.Security.Claims;
 
 namespace AccessHub.API.Pages.Account
 {
@@ -31,6 +32,7 @@ namespace AccessHub.API.Pages.Account
         {
 
             var user = await _mediator.Send(new GetUserDetailsQuery(Input.Username));
+            var request = HttpContext.GetOpenIddictServerRequest();
             //if (user == null) return Page();
             // if(!user.ValidatePassword(Input.Password))
             // { return Page();
@@ -60,9 +62,10 @@ namespace AccessHub.API.Pages.Account
             var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
             var principal = new ClaimsPrincipal(identity);
 
+            //使用cookie登录
             await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
-            return LocalRedirect(ReturnUrl);
+            return Redirect(ReturnUrl);
         }
     }
     public class InputModel

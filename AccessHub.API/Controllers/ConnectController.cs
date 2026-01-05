@@ -1,6 +1,8 @@
 ﻿using System.Collections.Immutable;
+using System.Net;
 using System.Security.Claims;
 using AccessHub.Domain.Users;
+using AccessHub.Domain.Users.Model;
 using AccessHub.Domain.Users.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -26,17 +28,20 @@ namespace AccessHub.API.Controllers
         private readonly IUserRepository _users;
         private readonly IOpenIddictApplicationManager _applicationManager;
         private readonly IOpenIddictScopeManager _scopeManager;
+        private readonly IOpenIddictAuthorizationManager _authorizationManager;
         private readonly IPasswordHasher _passwordHasher;
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectController"/> class.
         /// </summary>
         /// <param name="users">The users<see cref="IUserRepository"/></param>
         public ConnectController(IUserRepository users, IOpenIddictApplicationManager applicationManager, IOpenIddictScopeManager scopeManager,
+            IOpenIddictAuthorizationManager authorizationManager,
             IPasswordHasher passwordHasher)
         {
             _users = users;
             _applicationManager = applicationManager;
             _scopeManager = scopeManager;
+            _authorizationManager = authorizationManager;
             _passwordHasher = passwordHasher;
         }
 
@@ -247,35 +252,22 @@ namespace AccessHub.API.Controllers
         /// access_token
         /// id_token
         /// refresh_token
+        /// 1. Authorization code 模式下，客户端发起登录，则首先进入该端点，
+        /// a) 检查用户是否已登录
         /// </summary>
         /// <returns>The <see cref="Task{IActionResult}"/></returns>
         [HttpGet("/connect/authorize")]
         [HttpPost("/connect/authorize")]
         public async Task<IActionResult> Authorize()
         {
+            //获取openiddict的请求信息（client_id,scope等等）
             var request = HttpContext.GetOpenIddictServerRequest()!;
-            // 确保用户已登录（cookie or Identity）
-            if (!User.Identity?.IsAuthenticated ?? true)
-                return Challenge(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-            // 根据 client 配置获取 ConsentType
-            var app = await _applicationManager.FindByClientIdAsync(request.ClientId!);
-            var consentType = await _applicationManager.GetConsentTypeAsync(app);
-
-            if (consentType == OpenIddictConstants.ConsentTypes.Explicit
-                || request.Prompt == OpenIddictConstants.Prompts.Consent)
+            //模拟cookie登录认证
+            var cookieAuthResult = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+            //判断是否登录成功（coockie）
+            if (!cookieAuthResult.Succeeded)
             {
-                // 显示 Consent 页面
-                var returnUrl = Request.Path + Request.QueryString;
-                return Redirect($"/Consent?returnUrl={Url.Encode(returnUrl)}");
-            }
-            
-            var result = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-            var t = request.IsAuthorizationCodeGrantType();
-            var t2 = request.GrantType;
-            if (!result.Succeeded)
-            {
-                // 用户未登录 → 显示登录页
+                // 用户未登录 → 显示登录页(cookie)
                 var props = new AuthenticationProperties
                 {
                     RedirectUri = Request.PathBase + Request.Path + QueryString.Create(
@@ -283,9 +275,51 @@ namespace AccessHub.API.Controllers
                 };
 
                 return Challenge(props,
-                    IdentityConstants.ApplicationScheme); //跳转到登录页（Razor）,默认Account/Login.cshtml,可在openiddict配置中修改
-
+                    IdentityConstants.ApplicationScheme);
             }
+            var userId = cookieAuthResult.Principal.Claims.First(a => a.Type == Claims.Subject).Value;
+            var user = await _users.GetByIdAsync(new Domain.Users.Model.UserId(Guid.Parse(userId)));
+            
+            var application = await _applicationManager.FindByClientIdAsync(request.ClientId!);
+            //判断是否已经永久授权,否则跳转到确认授权页面
+            var authorizations = _authorizationManager.FindAsync(
+                subject: userId,
+                client: request.ClientId!,
+                status: OpenIddictConstants.Statuses.Valid,
+                type: OpenIddictConstants.AuthorizationTypes.Permanent,//永久授权
+                scopes: request.GetScopes()
+                );
+            var permanented = false;
+            await foreach(var auth in authorizations)
+            {
+                permanented = true;
+                break;
+            }
+            if(!permanented && !"accepted".Equals(Request.Query["consent"]))
+            {
+                var consentUrl = Request.Path + Request.QueryString;
+                return Redirect($"/Account/Consent?returnUrl={WebUtility.UrlEncode(consentUrl)}");
+            }
+
+            //生成授权码
+            var identity = await CreateIdentity(request, user);
+            return SignIn(
+                new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            var consentType = await _applicationManager.GetConsentTypeAsync(application);
+
+            //Explicitc 每次都必须consent
+            //Implicit 永不显示consent
+            //External 自己控制
+            //Systemmatic 默认
+            if (consentType == OpenIddictConstants.ConsentTypes.Explicit
+                || request.Prompt == "consent")
+            {
+                // 显示 Consent 页面
+                var returnUrl = Request.Path + Request.QueryString;
+                return Redirect($"/Account/Consent?returnUrl={WebUtility.UrlEncode(returnUrl)}");
+            }
+            
+            
 
             // 用户已登录 → 继续授权
             //var principal = result.Principal!;
@@ -304,9 +338,37 @@ namespace AccessHub.API.Controllers
             return Ok();
         }
         [HttpGet("/connect/userinfo")]
-        public IActionResult Userinfo()
+        public async Task<IActionResult> Userinfo()
         {
-            return Ok();
+            var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+            {
+                return Challenge(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            var userId = result.Principal.FindFirst(Claims.Subject)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(new { error = "invalid_token", error_description = "User ID not found" });
+            }
+
+            var user = await _users.GetByIdAsync(new UserId(Guid.Parse(userId)));
+            if(user == null)
+            {
+                return NotFound(new { error = "user_not_found", error_description = "User not found" });
+            }
+            var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
+            var userInfo = new
+            {
+                sub = user.Id.Value.ToString(),
+                name = user.Name,
+                email = user.Email,
+                email_verified = true,
+                roles = roles,
+                scope = result.Principal.GetScopes()
+            };
+
+            return Ok(userInfo);
         }
 
         [HttpGet("/connect/device")]
@@ -314,7 +376,7 @@ namespace AccessHub.API.Controllers
         {
             return Ok();
         }
-        private async Task<ClaimsIdentity> CreateIdentity(OpenIddictRequest request)
+        private async Task<ClaimsIdentity> CreateIdentity(OpenIddictRequest request,User? user)
         {
             var application = await _applicationManager.FindByClientIdAsync(request.ClientId) ??
                     throw new InvalidOperationException("The application cannot be found.");
@@ -334,7 +396,7 @@ namespace AccessHub.API.Controllers
             var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
 
             // 使用 client_id 作为主题标识符
-            identity.AddClaim(Claims.Subject, clientId);
+            identity.AddClaim(Claims.Subject, user?.Id.Value.ToString() ?? clientId);
             identity.AddClaim(Claims.ClientId, clientId);
             //identity.AddClaim("tenant_id", tenantId);
 

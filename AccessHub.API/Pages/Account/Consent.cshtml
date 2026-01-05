@@ -1,5 +1,6 @@
 @page
-@model ConsentModel
+@using AccessHub.API.Pages.Account
+@model AccessHub.API.Pages.Account.ConsentModel
 @{
     ViewData["Title"] = "Authorize Application";
 }
@@ -8,6 +9,7 @@
 <p><strong>@Model.ApplicationName</strong> 请求访问你的账户数据:</p>
 
 <form method="post">
+    
     <input type="hidden" asp-for="ReturnUrl" />
     <input type="hidden" asp-for="Scopes" />
 
