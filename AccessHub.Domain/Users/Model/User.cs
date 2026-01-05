@@ -40,11 +40,6 @@ namespace AccessHub.Domain.Users.Model
             //AddDomainEvent(new UserCreatedDomainEvent(Id, username));
         }
 
-        public bool ValidatePassword(string rawPassword)
-        {
-            return rawPassword == PasswordHash;
-            //return BCrypt.Net.BCrypt.Verify(rawPassword, PasswordHash);
-        }
         public void UpdateEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email))

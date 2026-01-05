@@ -275,9 +275,10 @@ namespace AccessHub.API.Controllers
             // 用户已登录 → 继续授权
             //var principal = result.Principal!;
             // principal.SetScopes(request.GetScopes());
-            var identity = await CreateIdentity(request);
-            return SignIn(
-                new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            // var identity = await CreateIdentity(request);
+            // return SignIn(
+            //     new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            return Redirect($"/Account/Consent?{Request.QueryString.Value?.TrimStart('?')}");
 
             // 这里你可以实现自己的登录界面流程，示例直接返回 200
             //return Ok(new { message = "Authorization endpoint - implement UI/UX here." });

@@ -62,7 +62,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     opt.SetEndUserVerificationEndpointUris("/connect/verify"); //设备码端点2/2
                     // 3. 启用支持的授权模式
                     opt.AllowAuthorizationCodeFlow();// 授权码流
-                    opt.AllowAuthorizationCodeFlow();//.RequireProofKeyForCodeExchange();// 启用授权码模式 + PKCE
+                    //opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();// 启用授权码模式 + PKCE
                     opt.AllowClientCredentialsFlow();// 客户端凭据流
                     opt.AllowRefreshTokenFlow();// 刷新令牌流
                     opt.AllowDeviceAuthorizationFlow();// 设备流
