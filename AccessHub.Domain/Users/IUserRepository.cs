@@ -8,5 +8,8 @@ namespace AccessHub.Domain.Users
         Task<User> GetByUsernameAsync(string username);
         Task<User> GetByEmailAsync(string email);
         Task<bool> ExistsAsync(string username, string email);
+        Task<(IEnumerable<User>, int)> GetUsersAsync(int page, int pageSize, string? search = null, bool? isActive = null);
+        Task<(IEnumerable<Role>, int)> GetUserRolesAsync(UserId userId);
+        Task AssignRolesToUserAsync(UserId userId, IEnumerable<RoleId> roleIds);
     }
 }

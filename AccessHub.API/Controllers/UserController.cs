@@ -18,9 +18,10 @@ namespace AccessHub.API.Controllers
         }
         [HttpGet]
         [Authorize(Policy = "UserRead")]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] bool? isActive = null)
         {
-            return Ok("test");
+            var result = await _mediator.Send(new GetUsersQuery { Page = page, PageSize = pageSize, Search = search, IsActive = isActive });
+            return Ok(result);
         }
         [HttpGet("{username}")]
         [Authorize(Policy = "UserRead")]
@@ -52,6 +53,15 @@ namespace AccessHub.API.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteUserCommand { UserId = id });
+            return Ok();
+        }
+
+        [HttpPut("{id}/roles")]
+        [Authorize(Policy = "UserWrite")]
+        public async Task<IActionResult> AssignRoles(Guid id, [FromBody] AssignUserRolesCommand command)
+        {
+            command.UserId = id;
+            await _mediator.Send(command);
             return Ok();
         }
     }

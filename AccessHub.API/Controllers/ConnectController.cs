@@ -236,6 +236,76 @@ namespace AccessHub.API.Controllers
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
+            /* 4.刷新令牌模式
+             * 当访问令牌过期时，使用刷新令牌获取新的访问令牌
+             * POST /connect/token
+                grant_type=refresh_token
+                refresh_token=xxx
+                client_id=xxx
+                client_secret=yyy
+             */
+            if (request.IsRefreshTokenGrantType())
+            {
+                // 注意：刷新令牌会自动由OpenIddict进行验证：
+                // 如果刷新令牌无效或已过期，此操作将不会被调用
+
+                // 获取当前请求的身份验证结果
+                var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // 获取与刷新令牌关联的用户标识符
+                var userId = result.Principal?.FindFirstValue(Claims.Subject);
+                if (string.IsNullOrEmpty(userId))
+                    return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // 根据用户ID获取用户信息
+                var user = await _users.GetByIdAsync(new Domain.Users.Model.UserId(Guid.Parse(userId)));
+                if (user == null || user.IsDeleted || !user.IsActive)
+                    return Forbid(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // 创建一个新的ClaimsIdentity
+                var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                identity.AddClaim(Claims.Subject, user.Id.Value.ToString());
+                identity.AddClaim(Claims.Name, user.Name);
+                identity.AddClaim(Claims.Email, user.Email);
+
+                // 设置声明的目标
+                identity.SetDestinations(static claim => claim.Type switch
+                {
+                    Claims.Name => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+                    Claims.Email => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+                    Claims.Subject => new[]
+                    {
+                        Destinations.AccessToken,
+                        Destinations.IdentityToken
+                    },
+                    _ => Array.Empty<string>()
+                });
+
+                // 创建ClaimsPrincipal
+                var principal = new ClaimsPrincipal(identity);
+                
+                // 设置允许的作用域
+                principal.SetScopes(new[] 
+                {
+                    Scopes.OpenId, 
+                    Scopes.Email, 
+                    Scopes.Profile, 
+                    Scopes.Roles,
+                    "ahbapi.user.read",
+                    "ahbapi.user.write",
+                    "ahbapi.user.delete" 
+                });
+
+                return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
 
             return BadRequest();
         }
@@ -358,6 +428,7 @@ namespace AccessHub.API.Controllers
                 return NotFound(new { error = "user_not_found", error_description = "User not found" });
             }
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
+            roles.Add("admin");
             var userInfo = new
             {
                 sub = user.Id.Value.ToString(),

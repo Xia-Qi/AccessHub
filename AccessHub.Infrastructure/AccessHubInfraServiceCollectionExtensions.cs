@@ -21,6 +21,8 @@ namespace Microsoft.Extensions.DependencyInjection
             //Scoped 可以依赖 Scoped + Singleton
             //Transient 可以依赖任何生命周期
             services.TryAddScoped<IUserRepository, UserRepository>();//services.TryAddSingleton<IUserRepository, UserRepository>();
+            services.TryAddScoped<IRoleRepository, RoleRepository>();
+            services.TryAddScoped<IPermissionRepository, PermissionRepository>();
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
             services.TryAddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<AuditableEntitySaveChangesInterceptor>();
@@ -68,7 +70,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     opt.AllowDeviceAuthorizationFlow();// 设备流
                     // 4. 令牌配置
                     opt//.RegisterScopes("ahbapi.user.read", "ahbapi.user.write","ahbapi.user.delete") // 注册作用域，作用域在令牌中表示访问权限。（实际项目应该根据permissions来注册作用域）
-                           .SetAccessTokenLifetime(TimeSpan.FromHours(1));
+                           .SetAccessTokenLifetime(TimeSpan.FromMinutes(3))
+                           .SetRefreshTokenLifetime(TimeSpan.FromDays(1)); // 刷新令牌过期时间
 
                     // 5. 安全配置
                     //opt.AddEncryptionKey(new SymmetricSecurityKey(Convert.FromBase64String("DRjd/GnduI3Efzen9V9BvbNUfc/VKgXltV7Kbk9sMkY=")));

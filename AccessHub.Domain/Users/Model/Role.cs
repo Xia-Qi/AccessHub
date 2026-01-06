@@ -15,8 +15,23 @@ namespace AccessHub.Domain.Users.Model
         public string Name { get;private set; }
         public string Code { get;private set; }
         public ICollection<RolePermission> RolePermissions { get; } = [];
-        //public ICollection<User> Users { get; } = [];//²»ÄÜÕâÑùĞ´£¬²Î¿¼UserÀïRolesµÄ×¢ÊÍ
+        //public ICollection<User> Users { get; } = [];//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½Î¿ï¿½Userï¿½ï¿½Rolesï¿½ï¿½×¢ï¿½ï¿½
         public ICollection<UserRole> UserRoles { get; } = [];
 
+        public void UpdateName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("è§’è‰²åç§°ä¸èƒ½ä¸ºç©º");
+            
+            Name = name;
+        }
+
+        public void UpdateCode(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                throw new DomainException("è§’è‰²ç¼–ç ä¸èƒ½ä¸ºç©º");
+            
+            Code = code;
+        }
     }
 }

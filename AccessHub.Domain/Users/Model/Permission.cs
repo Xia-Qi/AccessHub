@@ -22,5 +22,20 @@ namespace AccessHub.Domain.Users.Model
             Name = name;
             Description = description;
         }
+
+        public void UpdateCode(string code)
+        {
+            Code = code;
+        }
+
+        public void UpdateName(string name)
+        {
+            Name = name;
+        }
+
+        public void UpdateDescription(string description)
+        {
+            Description = description;
+        }
     }
 }
