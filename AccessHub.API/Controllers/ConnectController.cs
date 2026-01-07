@@ -404,10 +404,68 @@ namespace AccessHub.API.Controllers
             // 这里你可以实现自己的登录界面流程，示例直接返回 200
             //return Ok(new { message = "Authorization endpoint - implement UI/UX here." });
         }
+        /// <summary>
+        /// The Logout endpoint handles user logout requests.
+        /// 前端调用示例（方式2：使用POST请求，包含id_token_hint）：
+        /// fetch('/connect/logout', {
+        ///   method: 'POST',
+        ///   headers: {
+        ///     'Content-Type': 'application/x-www-form-urlencoded'
+        ///   },
+        ///   body: new URLSearchParams({
+        ///     id_token_hint: 'your-id-token',
+        ///     post_logout_redirect_uri: window.location.origin
+        ///   })
+        /// });
+        /// </summary>
+        /// <returns>The <see cref="Task{IActionResult}"/></returns>
         [HttpPost("/connect/logout")]
-        public IActionResult Logout()
+        [HttpGet("/connect/logout")]
+        public async Task<IActionResult> Logout()
         {
-            return Ok();
+            // 获取OpenIddict注销请求
+            var request = HttpContext.GetOpenIddictServerRequest();
+            
+            // 完整的注销流程：同时终止应用cookie和OpenIddict认证状态
+            await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            // 增加OpenIddict认证方案的注销，确保完整清除OpenIddict的登录状态
+            await HttpContext.SignOutAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            
+            // 处理令牌撤销 - 根据OpenIddict最佳实践，令牌撤销通过专门的/connect/revoke端点处理
+            // 这里可以添加自定义的令牌撤销逻辑，例如记录日志或通知其他服务
+            if (!string.IsNullOrEmpty(request?.IdTokenHint))
+            {
+                // 记录注销日志，包含id_token_hint的信息
+                // 注意：不直接验证id_token，避免额外的计算开销和安全风险
+            }
+            
+            // 处理注销后的重定向
+            if (request != null && !string.IsNullOrEmpty(request.PostLogoutRedirectUri))
+            {
+                var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
+                if (application != null)
+                {
+                    var postLogoutRedirectUris = await _applicationManager.GetPostLogoutRedirectUrisAsync(application);
+                    if (postLogoutRedirectUris.Contains(request.PostLogoutRedirectUri))
+                    {
+                        var redirectUrl = request.PostLogoutRedirectUri;
+                        if (!string.IsNullOrEmpty(request.State))
+                        {
+                            redirectUrl += (redirectUrl.Contains('?') ? '&' : '?') + "state=" + WebUtility.UrlEncode(request.State);
+                        }
+                        return Redirect(redirectUrl);
+                    }
+                }
+            }
+            
+            // 如果是GET请求，返回注销成功页面
+            if (Request.Method == "GET")
+            {
+                return Content("<h2>您已成功注销</h2>", "text/html");
+            }
+            
+            // POST请求返回成功响应
+            return Ok(new { message = "注销成功" });
         }
         [HttpGet("/connect/userinfo")]
         public async Task<IActionResult> Userinfo()

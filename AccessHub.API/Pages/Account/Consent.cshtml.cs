@@ -49,13 +49,36 @@ namespace AccessHub.API.Pages.Account
         {
             if (action == "no")
             {
-                // 拒绝授权 -> 返回错误给客户端
-                var properties = new AuthenticationProperties(new Dictionary<string, string?>
+                // 拒绝授权 -> 解析returnUrl，构造带有错误信息的重定向URL
+                var uri = new Uri("http://localhost" + ReturnUrl);
+                var query = QueryHelpers.ParseQuery(uri.Query);
+                
+                // 获取客户端的redirect_uri
+                string? redirectUri = query.TryGetValue("redirect_uri", out var redirectUriValue) ? redirectUriValue.ToString() : null;
+                
+                if (!string.IsNullOrEmpty(redirectUri))
                 {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.AccessDenied,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "User denied consent"
-                });
-                return Forbid(properties, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                    // 构造错误参数
+                    var errorParams = new Dictionary<string, string>{
+                        { "error", OpenIddictConstants.Errors.AccessDenied },
+                        { "error_description", "User denied consent" }
+                    };
+                    
+                    // 如果有state参数，也需要带上
+                    if (query.TryGetValue("state", out var stateValue))
+                    {
+                        errorParams.Add("state", stateValue.ToString());
+                    }
+                    
+                    // 构造完整的重定向URL
+                    var redirectUrl = QueryHelpers.AddQueryString(redirectUri, errorParams);
+                    return Redirect(redirectUrl);
+                }
+                else
+                {
+                    // 如果没有redirect_uri，返回403错误
+                    return StatusCode(403, "User denied consent");
+                }
             }
 
             // 同意授权 -> 继续回到 authorize 端点
@@ -63,7 +86,6 @@ namespace AccessHub.API.Pages.Account
             p.Add("consent", "accepted");
             var redirctUrl = QueryHelpers.AddQueryString(ReturnUrl, p);
             return Redirect(redirctUrl);
-                //                QueryHelpers.AddQueryString("/connect/authorize", Request.Query.Append(new KeyValuePair<string, StringValues>("consent", "accepted")));
         }
     }
 
