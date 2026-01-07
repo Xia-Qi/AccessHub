@@ -229,6 +229,7 @@ namespace AccessHub.API.Controllers
                     Scopes.Email, 
                     Scopes.Profile, 
                     Scopes.Roles,
+                    Scopes.OfflineAccess, // ✅ 添加 OfflineAccess 作用域，用于返回 refresh_token
                     "ahbapi.user.read",
                     "ahbapi.user.write",
                     "ahbapi.user.delete" 
@@ -299,6 +300,7 @@ namespace AccessHub.API.Controllers
                     Scopes.Email, 
                     Scopes.Profile, 
                     Scopes.Roles,
+                    Scopes.OfflineAccess, // ✅ 添加 OfflineAccess 作用域，用于支持 refresh_token
                     "ahbapi.user.read",
                     "ahbapi.user.write",
                     "ahbapi.user.delete" 
