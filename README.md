@@ -1,9 +1,7 @@
 ﻿# AccessHub V1
 
 AccessHub是一个基于ASP.NET Core和OpenIddict构建的认证授权中心，为分散式系统提供统一的认证和授权。
-<video src="./Source/Readme/SSO登录.mp4" controls width="500" height="300">
-  您的浏览器不支持HTML5视频播放。
-</video>
+[![Watch the demo](Source/Readme/登录.gif)](Source/Readme/SSO登录.mp4)
 
 ## 项目架构
 
