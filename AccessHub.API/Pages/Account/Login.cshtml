@@ -1,4 +1,4 @@
-﻿@page
+@page
 @using AccessHub.API.Pages.Account
 @model AccessHub.API.Pages.Account.LoginModel
 @{
@@ -111,6 +111,27 @@
             color: var(--primary);
             text-decoration: none;
         }
+
+        /* 错误提示：用于显示 ModelState 中的模型级错误（如"用户名或密码错误"）
+           tag helper 无错误时渲染占位 <li style="display:none">，故默认隐藏、
+           仅当存在可见 li 时才显示。兼容现代浏览器 :has 选择器。 */
+        .validation-summary {
+            display: none;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .validation-summary:has(li:not([style*="display:none"])) {
+            display: block;
+        }
+            .validation-summary ul {
+                margin: 0;
+                padding-left: 18px;
+            }
     </style>
 </head>
 <body>
@@ -118,7 +139,13 @@
         <h2>Welcome Back</h2>
         <div class="subtitle">Sign in to continue</div>
 
-        <form method="post">
+        <!-- ModelOnly：只显示模型级错误（AddModelError(string.Empty, ...)），不显示字段级错误 -->
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+        <!-- asp-antiforgery="true"：FormTagHelper 仅在 form 带 asp-* 属性时才处理并注入
+             antiforgery token。裸 <form method="post"> 不注入 token → POST 校验失败返回 400。
+             此属性既触发 tag helper 处理，又显式声明注入 token。 -->
+        <form method="post" asp-antiforgery="true">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input id="username" name="Input.Username" type="text" required />

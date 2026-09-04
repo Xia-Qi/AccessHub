@@ -219,24 +219,23 @@ namespace AccessHub.API.Controllers
                     _ => Array.Empty<string>()
                 });
 
+                // 客户端当前被授权的 scope(管理员可能已运行时缩减权限)
+                var application = await _applicationManager.FindByClientIdAsync(request.ClientId!)
+                    ?? throw new InvalidOperationException("The application cannot be found.");
+                var allowedScopes = (await _applicationManager.GetPermissionsAsync(application))
+                    .Where(p => p.StartsWith(Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
+                    .Select(p => p.Substring(Permissions.Prefixes.Scope.Length)).ToImmutableArray();
+                // 实际授予 = 请求 scope ∩ 客户端被授权 scope。
+                // OpenIddict 已在 authorize 端点校验过请求 scope 合法性,此处二次交集
+                // 用于防御:权限被运行时缩减后,旧授权码不应再授予已被吊销的 scope。
+                // 之前实现硬编码全部 6 个 ahbapi scope,导致权限越权(Critical 安全漏洞)。
+                var scopes = request.GetScopes().Intersect(allowedScopes);
+
                 // 创建ClaimsPrincipal
                 var principal = new ClaimsPrincipal(identity);
-                
+
                 // 设置允许的作用域
-                principal.SetScopes(new[] 
-                {
-                    Scopes.OpenId, 
-                    Scopes.Email, 
-                    Scopes.Profile, 
-                    Scopes.Roles,
-                    Scopes.OfflineAccess, // ✅ 添加 OfflineAccess 作用域，用于返回 refresh_token
-                    "ahbapi.user.read",
-                    "ahbapi.user.write",
-                    "ahbapi.user.delete",
-                    "ahbapi.client.read",
-                    "ahbapi.client.write",
-                    "ahbapi.client.delete"
-                });
+                principal.SetScopes(scopes);
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
@@ -293,24 +292,22 @@ namespace AccessHub.API.Controllers
                     _ => Array.Empty<string>()
                 });
 
+                // 客户端当前被授权的 scope
+                var application = await _applicationManager.FindByClientIdAsync(request.ClientId!)
+                    ?? throw new InvalidOperationException("The application cannot be found.");
+                var allowedScopes = (await _applicationManager.GetPermissionsAsync(application))
+                    .Where(p => p.StartsWith(Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
+                    .Select(p => p.Substring(Permissions.Prefixes.Scope.Length)).ToImmutableArray();
+                // 实际授予 = 原 refresh token 携带的 scope ∩ 客户端当前被授权 scope。
+                // 防御:客户端权限被运行时缩减后,刷新时不应再授予已被吊销的 scope。
+                // 之前实现硬编码全部 6 个 ahbapi scope,导致权限越权(Critical 安全漏洞)。
+                var scopes = result.Principal!.GetScopes().Intersect(allowedScopes);
+
                 // 创建ClaimsPrincipal
                 var principal = new ClaimsPrincipal(identity);
-                
+
                 // 设置允许的作用域
-                principal.SetScopes(new[] 
-                {
-                    Scopes.OpenId, 
-                    Scopes.Email, 
-                    Scopes.Profile, 
-                    Scopes.Roles,
-                    Scopes.OfflineAccess, // ✅ 添加 OfflineAccess 作用域，用于支持 refresh_token
-                    "ahbapi.user.read",
-                    "ahbapi.user.write",
-                    "ahbapi.user.delete",
-                    "ahbapi.client.read",
-                    "ahbapi.client.write",
-                    "ahbapi.client.delete"
-                });
+                principal.SetScopes(scopes);
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
@@ -494,13 +491,13 @@ namespace AccessHub.API.Controllers
                 return NotFound(new { error = "user_not_found", error_description = "User not found" });
             }
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-            roles.Add("admin");
             var userInfo = new
             {
                 sub = user.Id.Value.ToString(),
                 name = user.Name,
                 email = user.Email,
-                email_verified = true,
+                // 暂无邮箱验证流程,如实返回 false,此前硬编码 true 属于失实声明。
+                email_verified = false,
                 roles = roles,
                 scope = result.Principal.GetScopes()
             };

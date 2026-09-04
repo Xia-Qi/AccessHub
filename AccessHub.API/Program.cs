@@ -114,8 +114,11 @@ builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
     options.Cookie.Name = "X-CSRF-COOKIE";
+    // SameSite=None 必须搭配 Secure,否则现代浏览器会拒绝该 cookie,
+    // 导致 Razor Pages 表单 POST 时拿不到 antiforgery cookie → 校验失败返回 400。
+    // SecurePolicy.SameAsRequest 在 HTTPS 下自动加 Secure 标志(应用为 HTTPS,故始终 Secure)。
     options.Cookie.SameSite = SameSiteMode.None;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 builder.Services.AddCors(options =>
 {

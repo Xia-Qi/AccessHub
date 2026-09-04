@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AccessHub.Domain.Users.Model;
+using AccessHub.Domain.Users.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccessHub.Infrastructure.Database
@@ -12,15 +13,12 @@ namespace AccessHub.Infrastructure.Database
     {
         public static void Seed(AccessHubDbContext context)
         {
-            if (!context.Users.Any())
-            {
-                var users = new List<User> {
-                    new User("admin","admin@example.com","123","13800000001"),//{ Name = "admin", Email = "admin@example.com" },
-                    new User("test","test@example.com","123","13800000002")
-                };
-                context.Users.AddRange(users);
-                context.SaveChanges();
-            }
+            // 种子用户密码必须经 PBKDF2 哈希存储;此前种子直接把明文 "123" 当哈希写入,
+            // 导致登录校验时 FromBase64String 抛 FormatException → 500。此处修正并自愈旧库脏数据。
+            var hasher = new DefaultPasswordHasher();
+            EnsureSeedUser(context, "admin", "admin@example.com", "123", "13800000001", hasher);
+            EnsureSeedUser(context, "test", "test@example.com", "123", "13800000002", hasher);
+            context.SaveChanges();
 
             if (!context.Roles.Any())
             {
@@ -75,6 +73,42 @@ namespace AccessHub.Infrastructure.Database
             //    }
             //}
         }
+        /// <summary>
+        /// 确保种子用户存在且密码为规范哈希格式。
+        /// 新库 → 新建(密码已哈希);旧库脏数据(明文当哈希)→ 自愈重哈希。
+        /// </summary>
+        private static void EnsureSeedUser(AccessHubDbContext context, string name, string email, string plainPassword, string phone, IPasswordHasher hasher)
+        {
+            var existing = context.Users.FirstOrDefault(u => u.Name == name);
+            var properHash = hasher.HashPassword(plainPassword);
+            if (existing == null)
+            {
+                context.Users.Add(new User(name, email, properHash, phone));
+            }
+            else if (!IsProperHash(existing.PasswordHash))
+            {
+                // 自愈:历史脏数据(明文"123"被当哈希存)→ 用规范 PBKDF2 哈希覆盖
+                existing.UpdatePassword(properHash);
+            }
+        }
+
+        /// <summary>
+        /// 判断存储的哈希是否为规范格式(salt+hash 的 base64,至少 48 字节)。
+        /// </summary>
+        private static bool IsProperHash(string stored)
+        {
+            if (string.IsNullOrEmpty(stored)) return false;
+            try
+            {
+                var data = Convert.FromBase64String(stored);
+                return data.Length >= 48; // 16 字节 salt + 32 字节 hash
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static void InitializeDatabase(AccessHubDbContext context)
         {
             // 应用迁移。

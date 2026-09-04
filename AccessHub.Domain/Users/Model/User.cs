@@ -53,6 +53,16 @@ namespace AccessHub.Domain.Users.Model
             PhoneNumber = new PhoneNumber(phoneNumber);
         }
 
+        /// <summary>
+        /// 更新密码哈希(用于重置/修复种子脏数据)。
+        /// </summary>
+        public void UpdatePassword(string passwordHash)
+        {
+            if (string.IsNullOrWhiteSpace(passwordHash))
+                throw new DomainException("Password hash cannot be empty");
+            PasswordHash = passwordHash;
+        }
+
         public void Deactivate()
         {
             IsActive = false;
