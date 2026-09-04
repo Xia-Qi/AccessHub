@@ -301,5 +301,9 @@ ASALocalRun/
 .mfractor/
 # Local History for Visual Studio
 .localhistory/
-# BeatPulse healthcheck temp database 
+# BeatPulse healthcheck temp database
 healthchecksdb
+
+# 本地自签 https 证书（dev only，勿入库）
+**/certs/
+!**/certs/.gitkeep

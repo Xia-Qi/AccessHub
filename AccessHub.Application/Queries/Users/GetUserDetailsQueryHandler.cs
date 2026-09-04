@@ -28,7 +28,8 @@ namespace AccessHub.Application.Queries.Users
                 Username = user.Name,
                 Email = user.Email,
                 IsActive = user.IsActive,
-                Roles = user.UserRoles.Select(r => r.Role.Name).ToList()
+                Roles = user.UserRoles.Select(r => r.Role.Name).ToList(),
+                RoleIds = user.UserRoles.Select(r => r.RoleId.Value).ToList()
             };
         }
     }

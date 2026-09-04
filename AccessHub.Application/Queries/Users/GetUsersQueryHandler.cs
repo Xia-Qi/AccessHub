@@ -31,7 +31,8 @@ namespace AccessHub.Application.Queries.Users
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.LastModifiedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                RoleIds = user.UserRoles.Select(ur => ur.RoleId.Value).ToList()
             }).ToList();
 
             return new GetUsersQueryResult

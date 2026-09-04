@@ -232,7 +232,10 @@ namespace AccessHub.API.Controllers
                     Scopes.OfflineAccess, // ✅ 添加 OfflineAccess 作用域，用于返回 refresh_token
                     "ahbapi.user.read",
                     "ahbapi.user.write",
-                    "ahbapi.user.delete" 
+                    "ahbapi.user.delete",
+                    "ahbapi.client.read",
+                    "ahbapi.client.write",
+                    "ahbapi.client.delete"
                 });
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -303,7 +306,10 @@ namespace AccessHub.API.Controllers
                     Scopes.OfflineAccess, // ✅ 添加 OfflineAccess 作用域，用于支持 refresh_token
                     "ahbapi.user.read",
                     "ahbapi.user.write",
-                    "ahbapi.user.delete" 
+                    "ahbapi.user.delete",
+                    "ahbapi.client.read",
+                    "ahbapi.client.write",
+                    "ahbapi.client.delete"
                 });
 
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);

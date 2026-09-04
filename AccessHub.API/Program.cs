@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using AccessHub.Domain;
 using AccessHub.Infrastructure.Database;
 using AccessHub.Infrastructure.OpenIddict;
@@ -7,6 +8,22 @@ using Microsoft.OpenApi;
 using OpenIddict.Validation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Dev https：launchSettings 已声明 https://0.0.0.0:5700，此处为 https 端点提供自签证书
+// （certs/dev.crt + dev.key，SAN 含 localhost / 127.0.0.1 / 192.168.52.129），
+// 避免 Linux 上依赖 dotnet dev-certs。前端走 https 后，此处 https 可消除混合内容拦截。
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ConfigureHttpsDefaults(httpsOptions =>
+    {
+        var certPath = Path.Combine(builder.Environment.ContentRootPath, "certs", "dev.crt");
+        var keyPath = Path.Combine(builder.Environment.ContentRootPath, "certs", "dev.key");
+        if (File.Exists(certPath) && File.Exists(keyPath))
+        {
+            httpsOptions.ServerCertificate = X509Certificate2.CreateFromPemFile(certPath, keyPath);
+        }
+    });
+});
 
 // Add services to the container.
 builder.Services.AddAccessHubApp();
@@ -62,6 +79,33 @@ builder.Services.AddAuthorization(options =>
                 c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.user.delete"));
         });
     });
+    options.AddPolicy("ClientRead", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            return context.User.HasClaim(c =>
+                c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.client.read"));
+        });
+    });
+    options.AddPolicy("ClientWrite", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            return context.User.HasClaim(c =>
+                c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.client.write"));
+        });
+    });
+    options.AddPolicy("ClientDelete", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            return context.User.HasClaim(c =>
+                c.Type == "scope" && c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("ahbapi.client.delete"));
+        });
+    });
 });
 
 builder.Services.AddControllers();
@@ -81,8 +125,10 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
             "http://localhost:8848",
             "http://127.0.0.1:8848",
-            "http://192.168.172.128:8848",
-            "https://192.168.172.128:8848"
+            "http://192.168.52.129:8848",
+            "https://localhost:8848",
+            "https://127.0.0.1:8848",
+            "https://192.168.52.129:8848"
         )
         .AllowAnyHeader()
         .AllowAnyMethod()

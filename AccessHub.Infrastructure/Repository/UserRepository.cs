@@ -195,7 +195,7 @@ namespace AccessHub.Infrastructure.Repository
                 user.UserRoles.Add(new UserRole(user, role));
             }
 
-            await _dbContext.SaveChangesAsync();
+            //await _dbContext.SaveChangesAsync();
         }
     }
 }

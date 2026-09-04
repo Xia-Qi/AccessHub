@@ -15,8 +15,8 @@ namespace AccessHub.Infrastructure.Database
             if (!context.Users.Any())
             {
                 var users = new List<User> {
-                    new User("admin","123","123","111"),//{ Name = "admin", Email = "admin@example.com" },
-                    new User("test","123","123","111")
+                    new User("admin","admin@example.com","123","13800000001"),//{ Name = "admin", Email = "admin@example.com" },
+                    new User("test","test@example.com","123","13800000002")
                 };
                 context.Users.AddRange(users);
                 context.SaveChanges();

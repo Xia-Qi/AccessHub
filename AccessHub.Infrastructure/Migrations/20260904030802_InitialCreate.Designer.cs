@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccessHub.Infrastructure.Migrations
 {
     [DbContext(typeof(AccessHubDbContext))]
-    [Migration("20251227191522_InitialCreate")]
+    [Migration("20260904030802_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -328,8 +328,8 @@ namespace AccessHub.Infrastructure.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Type")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
 
@@ -424,8 +424,8 @@ namespace AccessHub.Infrastructure.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Type")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
 

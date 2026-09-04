@@ -23,5 +23,6 @@ namespace AccessHub.Application.Queries.Users
         public string Email { get; set; }
         public bool IsActive { get; set; }
         public ICollection<string> Roles { get; set; }
+        public ICollection<Guid> RoleIds { get; set; }
     }
 }

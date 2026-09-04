@@ -29,5 +29,6 @@ namespace AccessHub.Application.Queries.Users
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public ICollection<string> Roles { get; set; }
+        public ICollection<Guid> RoleIds { get; set; }
     }
 }

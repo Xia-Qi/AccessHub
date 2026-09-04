@@ -1,4 +1,4 @@
-﻿using AccessHub.Domain.Users;
+using AccessHub.Domain.Users;
 using AccessHub.Infrastructure;
 using AccessHub.Infrastructure.Database;
 using AccessHub.Infrastructure.Repository;
@@ -55,6 +55,16 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddServer(opt =>
                 {
 
+                    // 显式指定 Issuer：dev 环境下 Vite 代理会把 Host 改写为 localhost:5700，
+                    // 而 OAuth 流实际从 192.168.52.129:5700 签发 token，导致 iss 与验证期望不一致 → API 401。
+                    // 设置固定 Issuer 后，签发与验证共用同一值，不再依赖请求 Host 计算。
+                    // 生产环境应改为对外可达的固定 URL（见 appsettings.json → OpenIddict:Issuer）。
+                    var issuer = configuration["OpenIddict:Issuer"];
+                    if (!string.IsNullOrWhiteSpace(issuer))
+                    {
+                        opt.SetIssuer(issuer);
+                    }
+
                     // 2. 启用授权端点
                     opt.SetTokenEndpointUris("/connect/token");
                     opt.SetAuthorizationEndpointUris("/connect/authorize");
@@ -63,8 +73,9 @@ namespace Microsoft.Extensions.DependencyInjection
                     opt.SetDeviceAuthorizationEndpointUris("/connect/device"); //设备码端点1/2
                     opt.SetEndUserVerificationEndpointUris("/connect/verify"); //设备码端点2/2
                     // 3. 启用支持的授权模式
-                    opt.AllowAuthorizationCodeFlow();// 授权码流
-                    //opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();// 启用授权码模式 + PKCE
+                    // 授权码流 + 强制 PKCE（对所有走授权码流程的客户端生效）。
+                    // userManageClient 仅用 client_credentials，不受影响。
+                    opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
                     opt.AllowClientCredentialsFlow();// 客户端凭据流
                     opt.AllowRefreshTokenFlow();// 刷新令牌流
                     opt.AllowDeviceAuthorizationFlow();// 设备流

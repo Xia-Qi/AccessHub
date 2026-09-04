@@ -129,7 +129,7 @@ namespace AccessHub.Infrastructure.Repository
                 role.RolePermissions.Add(new RolePermission(role, permission));
             }
 
-            await _dbContext.SaveChangesAsync();
+            //await _dbContext.SaveChangesAsync();
         }
     }
 }
