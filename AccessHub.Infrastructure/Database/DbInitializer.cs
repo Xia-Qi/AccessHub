@@ -1,78 +1,87 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using AccessHub.Domain.Users.Model;
 using AccessHub.Domain.Users.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccessHub.Infrastructure.Database
 {
+    /// <summary>
+    /// 系统引导种子:admin 用户 + admin 角色 + 细粒度权限集 + 通配符。
+    /// 命名规范(借鉴 Microsoft Graph + AWS IAM):
+    ///   permission: 资源.动作(user.read) | 模块通配(user.all) | 顶级通配(*.* 仅 admin)
+    ///   scope: ahb.模块(ahb.usermgmt) — 在 OpenIddictSetup 种子,不在此处
+    /// admin 拥有 *.*(顶级通配,PolicyProvider 短路所有具体权限)。
+    /// </summary>
     public static class DbInitializer
     {
         public static void Seed(AccessHubDbContext context)
         {
-            // 种子用户密码必须经 PBKDF2 哈希存储;此前种子直接把明文 "123" 当哈希写入,
-            // 导致登录校验时 FromBase64String 抛 FormatException → 500。此处修正并自愈旧库脏数据。
             var hasher = new DefaultPasswordHasher();
+
+            // 1. 权限种子:细粒度资源.动作 + 模块通配(.all)+ 顶级通配(*.*)
+            var permissionDefs = new (string Code, string Name, string Description)[]
+            {
+                // 顶级通配(仅系统引导 admin 用,谨慎)
+                ("*.*",            "Super Admin",        "All permissions wildcard"),
+                // 模块级通配(给模块管理员角色用)
+                ("user.all",       "User Module Admin",  "All user module permissions"),
+                ("client.all",     "Client Module Admin","All client module permissions"),
+                ("role.all",       "Role Module Admin",  "All role module permissions"),
+                // 用户模块细粒度
+                ("user.read",      "User Read",          "Read user"),
+                ("user.list",      "User List",          "List users"),
+                ("user.write",     "User Write",         "Create/Update user"),
+                ("user.delete",    "User Delete",        "Delete user"),
+                // 客户端模块细粒度
+                ("client.read",    "Client Read",        "Read client"),
+                ("client.write",   "Client Write",       "Create/Update client and grant permissions"),
+                ("client.delete",  "Client Delete",      "Delete client"),
+                // 角色模块细粒度
+                ("role.read",      "Role Read",          "Read role"),
+                ("role.write",     "Role Write",          "Create/Update role and assign permissions"),
+                ("role.delete",    "Role Delete",        "Delete role"),
+            };
+            var permById = new Dictionary<string, Permission>();
+            foreach (var (code, name, desc) in permissionDefs)
+            {
+                var perm = context.Permissions.FirstOrDefault(p => p.Code == code);
+                if (perm == null)
+                {
+                    perm = new Permission(code, name, desc);
+                    context.Permissions.Add(perm);
+                    context.SaveChanges();
+                }
+                permById[code] = perm;
+            }
+
+            // 2. 角色:admin → [*.*](顶级通配,系统引导)
+            var adminRole = context.Roles.Include(r => r.RolePermissions).FirstOrDefault(r => r.Name == "admin");
+            if (adminRole == null)
+            {
+                adminRole = new Role("admin", "adn");
+                context.Roles.Add(adminRole);
+                context.SaveChanges();
+                adminRole = context.Roles.Include(r => r.RolePermissions).First(r => r.Name == "admin");
+            }
+            var superPerm = permById["*.*"];
+            if (!adminRole.RolePermissions.Any(rp => rp.PermissionId.Equals(superPerm.Id)))
+            {
+                adminRole.RolePermissions.Add(new RolePermission(adminRole, superPerm));
+                context.SaveChanges();
+            }
+
+            // 3. 用户:admin(密码哈希规范自愈),绑定 admin 角色
             EnsureSeedUser(context, "admin", "admin@example.com", "123", "13800000001", hasher);
-            EnsureSeedUser(context, "test", "test@example.com", "123", "13800000002", hasher);
-            context.SaveChanges();
-
-            if (!context.Roles.Any())
+            var adminUser = context.Users.Include(u => u.UserRoles).FirstOrDefault(u => u.Name == "admin");
+            if (adminUser != null && !adminUser.UserRoles.Any(ur => ur.RoleId.Equals(adminRole.Id)))
             {
-                var roles = new List<Role> {
-                    new Role("admin","adn"),
-                    new Role("user","usr")
-                };
-                context.Roles.AddRange(roles);
+                adminUser.UserRoles.Add(new UserRole(adminUser, adminRole));
                 context.SaveChanges();
             }
-
-            if (!context.Permissions.Any())
-            {
-                var perms = new List<Permission> {
-                    new Permission("admin","admin.all",""),
-                    new Permission("user","usr.read","")
-                };
-                context.Permissions.AddRange(perms);
-                context.SaveChanges();
-            }
-
-            //context.Users.Find(new { Name = "admin" })?.Roles.Add(context.Roles.Find(new { Name = "admin" }));
-
-            //if (!context.RolePermissions.Any())
-            //{
-            //    var adminRole = context.Roles.FirstOrDefault(r => r.Name == "admin");
-            //    var travelerRole = context.Roles.FirstOrDefault(r => r.Name == "user");
-            //    var adminPermission = context.Permissions.FirstOrDefault(p => p.Code == "admin.all");
-
-            //    if(adminRole != null && adminPermission != null && travelerRole != null)
-            //    {
-            //        var pms = new List<RolePermission>
-            //        {
-            //            new RolePermission(adminRole,adminPermission),
-            //            new RolePermission(travelerRole,adminPermission)
-            //        };
-            //        context.RolePermissions.AddRange(pms);
-            //        context.SaveChanges();
-            //    }
-                
-            //}
-
-            //if (!context.UserRoles.Any())
-            //{
-            //    var adminUser = context.Users.FirstOrDefault(u => u.Name == "admin");
-            //    var adminRole = context.Roles.FirstOrDefault(r => r.Name == "admin");
-            //    if (adminUser != null && adminRole != null)
-            //    {
-            //        var userRole = new UserRole(adminUser, adminRole);
-            //        context.UserRoles.Add(userRole);
-            //        context.SaveChanges();
-            //    }
-            //}
         }
+
         /// <summary>
         /// 确保种子用户存在且密码为规范哈希格式。
         /// 新库 → 新建(密码已哈希);旧库脏数据(明文当哈希)→ 自愈重哈希。
@@ -90,6 +99,7 @@ namespace AccessHub.Infrastructure.Database
                 // 自愈:历史脏数据(明文"123"被当哈希存)→ 用规范 PBKDF2 哈希覆盖
                 existing.UpdatePassword(properHash);
             }
+            context.SaveChanges();
         }
 
         /// <summary>
@@ -111,12 +121,8 @@ namespace AccessHub.Infrastructure.Database
 
         public static void InitializeDatabase(AccessHubDbContext context)
         {
-            // 应用迁移。
-            // 注意：迁移前通过 dotnet cli命令生成迁移文件：
-            //1. dotnet ef migrations add InitialCreate
-            //2. dotnet ef database udpate
             context.Database.Migrate();
-            DbInitializer.Seed(context); // 插入种子数据
+            DbInitializer.Seed(context);
         }
     }
 }

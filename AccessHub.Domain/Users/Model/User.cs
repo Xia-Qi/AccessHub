@@ -11,7 +11,16 @@ namespace AccessHub.Domain.Users.Model
         public string PasswordHash { get; private set; }
         public PhoneNumber PhoneNumber {  get; private set; }
         public DateTime? LockoutEnd { get; private set; }
+        public int AccessFailedCount { get; private set; }
         public bool IsActive { get; private set; }
+
+        /// <summary>账户锁定阈值:连续失败次数达到此值则锁定。</summary>
+        public const int MaxFailedAccessAttempts = 5;
+        /// <summary>锁定时长:达到阈值后锁定的时长。</summary>
+        public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
+        /// <summary>账户当前是否处于锁定状态(LockoutEnd 未过期)。</summary>
+        public bool IsLockedOut => LockoutEnd.HasValue && LockoutEnd.Value > DateTime.UtcNow;
         //����ʹ�á��Զ����м��ʵ��(UserRole)��ʱ��EF Core ����������ֱ���� Many-to-Many�������˻�Ϊ���� One-to-Many + One-to-Many��
         //��ʱ���ٰ�����Roles�������ģ�ͳ�ͻ��EF ��֪������Ҫ�Զ���Զ໹���ֶ���Զࣩ���滻Ϊ�м��UserRoles.
         //public ICollection<Role> Roles { get; } = [];
@@ -71,6 +80,28 @@ namespace AccessHub.Domain.Users.Model
         public void Activate()
         {
             IsActive = true;
+        }
+
+        /// <summary>
+        /// 记录一次登录失败:失败计数 +1,达到阈值则设置 LockoutEnd 锁定账户。
+        /// 锁定状态下仍可继续计数(防御式),实际登录流程会先校验 IsLockedOut 拒绝。
+        /// </summary>
+        public void RecordFailedAccessAttempt()
+        {
+            AccessFailedCount++;
+            if (AccessFailedCount >= MaxFailedAccessAttempts)
+            {
+                LockoutEnd = DateTime.UtcNow.Add(LockoutDuration);
+            }
+        }
+
+        /// <summary>
+        /// 登录成功:重置失败计数为 0,清除锁定时间(若有)。
+        /// </summary>
+        public void ResetAccessFailedCount()
+        {
+            AccessFailedCount = 0;
+            LockoutEnd = null;
         }
         public void SoftDelete()
         {

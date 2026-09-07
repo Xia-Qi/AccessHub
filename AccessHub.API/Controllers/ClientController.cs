@@ -14,6 +14,8 @@ namespace AccessHub.API.Controllers
     /// </summary>
     [Route("/api/client")]
     [ApiController]
+    // 双层授权:Controller 级 scope(客户端被授权访问客户端管理模块)+ Action 级 permission
+    [Authorize(Policy = "ahb.clientmgmt")]
     public class ClientController : ControllerBase
     {
         private readonly IOpenIddictApplicationManager _applicationManager;
@@ -25,7 +27,7 @@ namespace AccessHub.API.Controllers
 
         /// <summary>客户端列表</summary>
         [HttpGet]
-        [Authorize(Policy = "ClientRead")]
+        [Authorize(Policy = "perm.client.read")]
         public async Task<IActionResult> Index()
         {
             var list = new List<object>();
@@ -38,7 +40,7 @@ namespace AccessHub.API.Controllers
 
         /// <summary>客户端详情</summary>
         [HttpGet("{clientId}")]
-        [Authorize(Policy = "ClientRead")]
+        [Authorize(Policy = "perm.client.read")]
         public async Task<IActionResult> Get(string clientId)
         {
             var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -50,7 +52,7 @@ namespace AccessHub.API.Controllers
 
         /// <summary>创建客户端</summary>
         [HttpPost]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> Create([FromBody] CreateClientRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ClientId))
@@ -80,7 +82,7 @@ namespace AccessHub.API.Controllers
         /// 注意：不会修改 client_secret，重置密钥请用 <see cref="ResetSecret"/>。
         /// </summary>
         [HttpPut("{clientId}")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> Update(string clientId, [FromBody] UpdateClientRequest request)
         {
             var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -119,7 +121,7 @@ namespace AccessHub.API.Controllers
 
         /// <summary>删除客户端</summary>
         [HttpDelete("{clientId}")]
-        [Authorize(Policy = "ClientDelete")]
+        [Authorize(Policy = "perm.client.delete")]
         public async Task<IActionResult> Delete(string clientId)
         {
             var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -132,7 +134,7 @@ namespace AccessHub.API.Controllers
 
         /// <summary>查看客户端被授予的全部权限（scope / grant_type / endpoint / response_type）</summary>
         [HttpGet("{clientId}/permissions")]
-        [Authorize(Policy = "ClientRead")]
+        [Authorize(Policy = "perm.client.read")]
         public async Task<IActionResult> GetPermissions(string clientId)
         {
             var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -144,41 +146,41 @@ namespace AccessHub.API.Controllers
         }
 
         /// <summary>
-        /// 给客户端授权 scope（如 ahbapi.user.read）。
+        /// 给客户端授权 scope(如 ahb.usermgmt)。
         /// 请求体传 scope 名列表，将以全量替换方式重写该客户端所有 scope 权限。
         /// </summary>
         [HttpPut("{clientId}/scopes")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> GrantScopes(string clientId, [FromBody] GrantItemsRequest request)
             => await ReplacePermissionsByPrefix(clientId, Permissions.Prefixes.Scope, request?.Items);
 
         /// <summary>给客户端授权 grant_type（authorization_code / refresh_token / client_credentials）</summary>
         [HttpPut("{clientId}/grant-types")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> GrantGrantTypes(string clientId, [FromBody] GrantItemsRequest request)
             => await ReplacePermissionsByPrefix(clientId, Permissions.Prefixes.GrantType, request?.Items);
 
         /// <summary>给客户端授权可访问的端点（authorization / token / logout / revocation / userinfo）</summary>
         [HttpPut("{clientId}/endpoints")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> GrantEndpoints(string clientId, [FromBody] GrantItemsRequest request)
             => await ReplacePermissionsByPrefix(clientId, Permissions.Prefixes.Endpoint, request?.Items);
 
         /// <summary>给客户端授权 response_type（code / token / id_token）</summary>
         [HttpPut("{clientId}/response-types")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> GrantResponseTypes(string clientId, [FromBody] GrantItemsRequest request)
             => await ReplacePermissionsByPrefix(clientId, Permissions.Prefixes.ResponseType, request?.Items);
 
         /// <summary>设置客户端的 redirect_uri 列表</summary>
         [HttpPut("{clientId}/redirect-uris")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> SetRedirectUris(string clientId, [FromBody] GrantItemsRequest request)
             => await ReplaceUris(clientId, redirectUris: request?.Items);
 
         /// <summary>设置客户端的 post_logout_redirect_uri 列表</summary>
         [HttpPut("{clientId}/post-logout-redirect-uris")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> SetPostLogoutRedirectUris(string clientId, [FromBody] GrantItemsRequest request)
             => await ReplaceUris(clientId, postLogoutRedirectUris: request?.Items);
 
@@ -187,7 +189,7 @@ namespace AccessHub.API.Controllers
         /// 返回明文密钥（仅此一次，入库前由 OpenIddict 自动哈希）。
         /// </summary>
         [HttpPost("{clientId}/secret")]
-        [Authorize(Policy = "ClientWrite")]
+        [Authorize(Policy = "perm.client.write")]
         public async Task<IActionResult> ResetSecret(string clientId, [FromBody] ResetSecretRequest? request)
         {
             var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -323,7 +325,7 @@ namespace AccessHub.API.Controllers
             public string? ConsentType { get; set; }     // explicit | implicit | external | systematic
             public List<string>? RedirectUris { get; set; }
             public List<string>? PostLogoutRedirectUris { get; set; }
-            public List<string>? Permissions { get; set; } // 完整权限串，如 scp:ahbapi.user.read 或直接 ahbapi.user.read
+            public List<string>? Permissions { get; set; } // 完整权限串,如 scp:ahb.usermgmt 或直接 ahb.usermgmt
         }
 
         public class UpdateClientRequest

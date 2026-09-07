@@ -1,0 +1,52 @@
+{
+  "clientId": "userManageWebClient",
+  "displayName": "User Management Web Client (Pure Admin)",
+  "clientType": "Public",
+  "redirectUris": [
+    "http://localhost:8848/callback",
+    "http://localhost:8848/callback/",
+    "http://127.0.0.1:8848/callback",
+    "http://127.0.0.1:8848/callback/",
+    "http://192.168.52.129:8848/callback",
+    "http://192.168.52.129:8848/callback/",
+    "https://localhost:8848/callback",
+    "https://localhost:8848/callback/",
+    "https://127.0.0.1:8848/callback",
+    "https://127.0.0.1:8848/callback/",
+    "https://192.168.52.129:8848/callback",
+    "https://192.168.52.129:8848/callback/"
+  ],
+  "postLogoutRedirectUris": [
+    "http://localhost:8848/login",
+    "http://localhost:8848/login/",
+    "http://127.0.0.1:8848/login",
+    "http://127.0.0.1:8848/login/",
+    "http://192.168.52.129:8848/login",
+    "http://192.168.52.129:8848/login/",
+    "https://localhost:8848/login",
+    "https://localhost:8848/login/",
+    "https://127.0.0.1:8848/login",
+    "https://127.0.0.1:8848/login/",
+    "https://192.168.52.129:8848/login",
+    "https://192.168.52.129:8848/login/"
+  ],
+  "permissions": [
+    "ept:authorization",
+    "ept:token",
+    "ept:end_session",
+    "ept:revocation",
+    "gt:authorization_code",
+    "gt:refresh_token",
+    "rst:code",
+    "scp:openid",
+    "scp:profile",
+    "scp:email",
+    "scp:roles",
+    "scp:offline_access",
+    "scp:ahb.usermgmt",
+    "scp:ahb.clientmgmt"
+  ],
+  "requirements": [
+    "ft:pkce"
+  ]
+}

@@ -8,7 +8,9 @@ namespace AccessHub.API.Controllers
 {
     [Route("/api/permission")]
     [ApiController]
-    [Authorize(Policy = "UserRead")] // 暂时使用UserRead权限，后续可以创建Permission相关的权限
+    // 双层授权:Controller 级 scope(用户管理模块)+ Action 级 permission
+    // 权限定义属于角色管理范畴,故复用 perm.role.* 校验(超管 *.* 自动通过)。
+    [Authorize(Policy = "ahb.usermgmt")]
     public class PermissionController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -19,6 +21,7 @@ namespace AccessHub.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "perm.role.read")]
         public async Task<IActionResult> Index([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
         {
             var result = await _mediator.Send(new GetPermissionsQuery { Page = page, PageSize = pageSize, Search = search });
@@ -26,7 +29,7 @@ namespace AccessHub.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "UserWrite")]
+        [Authorize(Policy = "perm.role.write")]
         public async Task<IActionResult> Create([FromBody] CreatePermissionCommand command)
         {
             var permissionId = await _mediator.Send(command);
@@ -34,7 +37,7 @@ namespace AccessHub.API.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Policy = "UserWrite")]
+        [Authorize(Policy = "perm.role.write")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePermissionCommand command)
         {
             command.PermissionId = id;
@@ -43,7 +46,7 @@ namespace AccessHub.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Policy = "UserDelete")]
+        [Authorize(Policy = "perm.role.delete")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeletePermissionCommand { PermissionId = id });

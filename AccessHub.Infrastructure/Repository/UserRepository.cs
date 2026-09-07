@@ -197,5 +197,34 @@ namespace AccessHub.Infrastructure.Repository
 
             //await _dbContext.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// 聚合用户全部权限码(user→role→permission,去重)。
+        /// </summary>
+        public async Task<IReadOnlyCollection<string>> GetPermissionsAsync(UserId userId)
+        {
+            var permissions = await _dbContext.Users
+                .Where(u => u.Id == userId)
+                .SelectMany(u => u.UserRoles)
+                .SelectMany(ur => ur.Role.RolePermissions)
+                .Select(rp => rp.Permission.Code)
+                .Distinct()
+                .ToListAsync();
+            return permissions;
+        }
+
+        /// <summary>
+        /// 聚合用户全部角色名(供 token 投放 role claim)。
+        /// </summary>
+        public async Task<IReadOnlyCollection<string>> GetRolesAsync(UserId userId)
+        {
+            var roles = await _dbContext.Users
+                .Where(u => u.Id == userId)
+                .SelectMany(u => u.UserRoles)
+                .Select(ur => ur.Role.Name)
+                .Distinct()
+                .ToListAsync();
+            return roles;
+        }
     }
 }
